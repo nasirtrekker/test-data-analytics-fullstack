@@ -26,7 +26,7 @@ A production-grade analytics platform for short-form video performance analysis,
 
 ```bash
 # Clone and navigate to repository
-cd test_blenda_takehome
+cd test_data-analytics-fullstack 
 
 # Build and launch service stack
 docker compose up --build -d && sleep 30
