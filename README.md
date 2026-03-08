@@ -936,6 +936,434 @@ test_blenda_takehome/
 
 ---
 
+## 🎯 Complete Execution Workflow for Developers
+
+This section provides a step-by-step guide for developers to understand how the complete system works: training with MLflow, model artifact persistence, backend initialization, and frontend consumption.
+
+### Architecture Overview
+
+The system follows a **three-phase workflow**:
+
+```
+Phase 1: Training (MLflow)          →  Phase 2: Backend (Inference)    →  Phase 3: Frontend (Visualization)
+┌────────────────────────────────┐      ┌──────────────────────────┐      ┌────────────────────────────┐
+│ scripts/train_pipeline.py       │      │ backend/app/main.py      │      │ frontend/src/App.tsx       │
+│ - Load data (sample_videos.csv) │      │                          │      │                            │
+│ - Train models (RF, KMeans,etc) │      │ Startup (lifespan):      │      │ Fetch from API:            │
+│ - Log to MLflow (./mlruns)      │ --→  │ - Call build_state()     │ --→  │ - GET /metrics             │
+│ - Save to models/ (.joblib)     │      │ - Load all models        │      │ - GET /insights            │
+│ - Update manifest.json          │      │ - Precompute analytics   │      │ - GET /similar             │
+│                                 │      │                          │      │                            │
+│ MLflow Tracking:                │      │ API Endpoints (port 8000)│      │ Visual Components:         │
+│ - Experiment: content-insights- │      │ - /health                │      │ - Overview KPIs            │
+│   training                      │      │ - /metrics               │      │ - Cluster scatter          │
+│ - Metrics: MAE, R², coverage    │      │ - /insights (ALL data)   │      │ - Anomalies table          │
+│ - Artifacts: model files        │      │ - /similar               │      │ - Predictions + intervals  │
+│                                 │      │                          │      │ - SHAP importance          │
+│                                 │      │ Returns JSON             │      │                            │
+│                                 │      │ (5-10ms latency)         │      │ Port: 5173                 │
+└────────────────────────────────┘      └──────────────────────────┘      └────────────────────────────┘
+```
+
+### Step 1: Training Pipeline with MLflow
+
+**When it runs:**
+- During development: `python -m scripts.train_pipeline`
+- During CI/CD: Automated on each push (GitHub Actions)
+- On schedule: Nightly retraining in production
+
+**Process:**
+
+```bash
+# 1. Activate environment
+source .venv/bin/activate
+
+# 2. Run training WITH MLflow tracking
+MLFLOW_TRACKING_URI=file:./mlruns python -m scripts.train_pipeline
+```
+
+**What happens in `scripts/train_pipeline.py`:**
+
+```python
+# Initialize MLflow
+mlflow.set_tracking_uri(os.getenv('MLFLOW_TRACKING_URI'))
+mlflow.set_experiment("content-insights-training")
+mlflow.start_run(run_name=f"train_pipeline_estimators_300")
+
+# Log parameters
+mlflow.log_param("n_estimators", 300)
+mlflow.log_param("data_samples", 1000)
+mlflow.log_param("features_count", 30)
+
+# Train RandomForest
+rf = RandomForestRegressor(n_estimators=300, random_state=42)
+rf.fit(X, y)
+
+# Log metrics
+mlflow.log_metric("train_mse", 0.0004)
+mlflow.log_metric("train_r2", 0.9988)
+
+# Log model artifact
+mlflow.sklearn.log_model(rf, "random_forest_model")
+
+# Save to disk
+save_model_versioned({'model': rf}, 'predictive_base', models_dir)
+
+# End run
+mlflow.end_run()
+```
+
+**Output files created:**
+```
+models/
+├── predictive_base_v2.joblib           # RandomForest regressor
+├── clusters_v2.joblib                  # K-Means + DBSCAN
+├── title_tfidf.joblib                  # TF-IDF vectorizer
+├── shap_sample.joblib                  # SHAP values (200 samples)
+├── mapie_validation.json               # Validation metrics
+└── manifest.json                       # Version registry
+
+mlruns/
+├── 0/                                  # Experiment ID
+│   └── <run-uuid>/
+│       ├── params/                     # Logged parameters
+│       ├── metrics/                    # Logged metrics
+│       └── artifacts/
+│           ├── random_forest_model/
+│           └── feature_columns.json
+```
+
+**View MLflow Tracking UI:**
+
+```bash
+# Terminal 2: Launch MLflow UI
+mlflow ui --backend-store-uri file:./mlruns --port 5000
+
+# Visit http://localhost:5000
+# - View experiment: "content-insights-training"
+# - See all runs with metrics (MAE, R², coverage)
+# - Download model artifacts
+```
+
+### Step 2: Backend Model Loading & Initialization
+
+**When it runs:**
+- On application startup (Uvicorn launches)
+- Via lifespan context manager in `backend/app/main.py`
+- Precomputes all analytics in memory (no disk I/O per request)
+
+**Process:**
+
+```python
+# backend/app/main.py
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize application state on startup."""
+    global STATE
+    
+    # Call build_state() from service.py
+    STATE = build_state(
+        data_path="./sample_videos.csv",
+        cluster_k=2,
+        contamination=0.1,
+        random_state=42,
+        test_size=0.2,
+        alpha=0.1
+    )
+    yield  # App runs here
+    # Cleanup if needed
+```
+
+**What `build_state()` does** ([backend/app/service.py](backend/app/service.py)):
+
+```python
+def build_state(data_path, cluster_k, ...):
+    # 1. Load CSV data
+    df = load_clean(data_path)  # 1,000 videos, 8 core features
+    
+    # 2. Apply clustering (loads models/clusters_v2.joblib)
+    df = add_clusters(df, k=cluster_k, ...)
+    # Adds columns: cluster, dbscan_cluster
+    # Results: K-Means silhouette=0.2671, 513|487 split
+    
+    # 3. Detect anomalies (Isolation Forest)
+    df = add_anomalies(df, contamination=0.1, ...)
+    # Adds column: is_anomaly (100 anomalies detected)
+    
+    # 4. Fit predictive model (loads models/predictive_base_v2.joblib)
+    df, pred_art = fit_predictive_with_conformal(...)
+    # Adds columns: prediction, prediction_lower, prediction_upper
+    # Loads MAPIE for uncertainty: coverage=93.5%
+    # Results: R²=0.9913, MAE=0.0010, RMSE=0.0012
+    
+    # 5. Build embeddings (loads models/title_tfidf.joblib)
+    _, mat = build_embeddings(df["title"].tolist())
+    # TF-IDF vectors for similarity search (256 features)
+    
+    # 6. Return immutable State object (thread-safe)
+    return State(df=df, tfidf_mat=mat, predictive=pred_art)
+    # Every API request uses this STATE, no reloading!
+```
+
+**Startup sequence (visible in logs):**
+
+```
+INFO:     Started server process [12345]
+INFO:     Waiting for application startup.
+[BUILD_STATE] Loading data from ./sample_videos.csv
+[BUILD_STATE] Adding clusters (K-Means k=2)
+[BUILD_STATE] K-Means silhouette score: 0.2671
+[BUILD_STATE] DBSCAN cluster distribution: 3 clusters, 984 noise points
+[BUILD_STATE] Adding anomalies (Isolation Forest)
+[BUILD_STATE] Detected 100 anomalies (10% contamination)
+[BUILD_STATE] Fitting predictive model (RandomForest + MAPIE)
+[BUILD_STATE] Model R² Score: 0.9913
+[BUILD_STATE] Conformal coverage: 93.5%
+[BUILD_STATE] Building embeddings (TF-IDF)
+[BUILD_STATE] TF-IDF matrix shape: (1000, 256)
+[BUILD_STATE] Application startup complete!
+INFO:     Application startup complete.
+```
+
+### Step 3: Backend API Endpoints
+
+**All endpoints are JSON-based, served on port 8000:**
+
+```bash
+# Launch backend
+cd backend && uvicorn app.main:app --reload --port 8000
+```
+
+**Endpoint reference:**
+
+| Endpoint | Query Params | Response Time | Response Size | Purpose |
+|----------|--------------|---------------|---------------|---------|
+| `/health` | None | <1ms | 20 bytes | Health check |
+| `/metrics` | None | 1ms | 500 bytes | Overview KPIs |
+| `/filters` | None | 1ms | 300 bytes | Filter options |
+| `/videos` | `offset`, `limit` | 2ms | 5KB | Video pagination |
+| `/insights` | None | 5ms | 50KB | All analytics |
+| `/similar` | `video_id`, `k=5` | 3ms | 2KB | Similar videos |
+
+**Example API calls:**
+
+```bash
+# Get overview metrics
+curl http://localhost:8000/metrics | jq
+
+# Response:
+{
+  "rows": 1000,
+  "total_views": 45000000,
+  "avg_engagement_rate": 0.0287,
+  "cluster_count": 2,
+  "anomaly_count": 100
+}
+
+# Get complete insights
+curl http://localhost:8000/insights | jq '.predictive_model'
+
+# Response:
+{
+  "metrics": {
+    "r2_score": 0.9913,
+    "mae": 0.0010,
+    "rmse": 0.0012,
+    "coverage_90": 0.935
+  },
+  "feature_importances": [
+    {"feature": "like_rate", "importance": 1.532},
+    {"feature": "share_rate", "importance": 0.295},
+    {"feature": "comment_rate", "importance": 0.006}
+  ]
+}
+
+# Get similar videos
+curl "http://localhost:8000/similar?video_id=001&k=3" | jq
+
+# Response:
+{
+  "similar": [
+    {"video_id": "042", "title": "Cookie Adventure", "similarity": 0.92},
+    {"video_id": "127", "title": "Cookie Mystery", "similarity": 0.88},
+    {"video_id": "203", "title": "Adventure Quest", "similarity": 0.85}
+  ]
+}
+```
+
+### Step 4: Frontend Components & Data Flow
+
+**When it runs:**
+- On application load in browser
+- On component mount via React hooks
+- On user interaction (filters, video selection)
+
+**Frontend architecture:**
+
+```
+App.tsx (Root Component)
+│
+├─ Overview.tsx
+│  └─ Calls: fetchMetrics() → GET /metrics → Display KPIs
+│
+├─ FiltersBar.tsx
+│  └─ Calls: fetchFilters() → GET /filters → Dropdown options
+│
+├─ ClusterScatter.tsx
+│  └─ Calls: fetchInsights() → GET /insights → Plot clusters on Recharts
+│
+├─ AnomaliesTable.tsx
+│  └─ Calls: fetchInsights() → GET /insights → Show outliers sorted
+│
+├─ PredictivePanel.tsx
+│  └─ Calls: fetchInsights() → GET /insights → Show model metrics + SHAP
+│
+└─ SimilarPanel.tsx
+   └─ Calls: fetchSimilar(videoId, k=5) → GET /similar → Show recommendations
+```
+
+**API client** ([frontend/src/api/client.ts](frontend/src/api/client.ts)):
+
+```typescript
+const BASE = env.VITE_API_URL ?? "http://localhost:8000";
+
+export async function getJson<T>(path: string): Promise<T> {
+  const r = await fetch(`${BASE}${path}`);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return (await r.json()) as T;
+}
+
+// Used in components:
+const metrics = await getJson("/metrics");        // 1ms
+const insights = await getJson("/insights");      // 5ms
+const similar = await getJson(`/similar?video_id=${id}&k=5`);  // 3ms
+```
+
+**Component example** ([frontend/src/components/ClusterScatter.tsx](frontend/src/components/ClusterScatter.tsx)):
+
+```typescript
+useEffect(() => {
+  (async () => {
+    const insights = await fetchInsights();
+    // insights.df has columns: cluster, engagement_rate, avg_watch_time_per_view
+    setData(insights.df);
+  })();
+}, []);
+
+return (
+  <ScatterChart width={600} height={400} data={data}>
+    <Scatter name="Videos" data={data} fill="#8884d8" />
+    <XAxis type="number" dataKey="engagement_rate" />
+    <YAxis type="number" dataKey="avg_watch_time_per_view" />
+  </ScatterChart>
+);
+```
+
+### Complete Local Development Workflow
+
+**Step-by-step setup for new developers:**
+
+```bash
+# 1. Clone repository
+git clone https://github.com/nasirtrekker/test-data-analytics-fullstack.git
+cd test_blenda_takehome
+
+# 2. Setup Python environment
+./setup_venv.sh
+source .venv/bin/activate
+pip install -e backend/
+
+# Terminal 1: Training + MLflow
+# ================================
+MLFLOW_TRACKING_URI=file:./mlruns python -m scripts.train_pipeline
+# Wait for: "✓ MLflow tracking complete. Run ID: xxxxxxxx"
+
+# Terminal 2: Backend API
+# =========================
+export APP_DATA_PATH=./sample_videos.csv
+cd backend && uvicorn app.main:app --reload --port 8000
+# Wait for: "Application startup complete."
+# Test: curl http://localhost:8000/health
+
+# Terminal 3: Frontend
+# ====================
+cd frontend
+npm install
+npm run dev
+# Wait for: "Local: http://localhost:5173/"
+
+# Terminal 4: MLflow UI (optional)
+# ==================================
+mlflow ui --backend-store-uri file:./mlruns --port 5000
+# Visit: http://localhost:5000
+```
+
+**Verification checklist:**
+
+- [ ] Backend logs show all models loaded (K-Means, RandomForest, TF-IDF, etc.)
+- [ ] Frontend loads at http://localhost:5173 without console errors
+- [ ] `/health` endpoint returns `{"ok": true}`
+- [ ] `/metrics` returns KPI data with 1000 rows
+- [ ] Cluster scatter plot shows 2 distinct clusters (513 vs 487)
+- [ ] Anomalies table shows ~100 outliers
+- [ ] Predictive panel displays R²=0.9913, Coverage=93.5%
+- [ ] Similar videos work (click any video, get top-5 recommendations)
+- [ ] MLflow shows "content-insights-training" experiment with 1+ runs
+
+### Docker Deployment Verification
+
+**Development Docker stack:**
+
+```bash
+docker compose up --build -d && sleep 30
+
+# Verify services
+docker compose ps
+# Should show: backend (8000), frontend (5173) running
+
+# Test endpoints
+curl http://localhost:8000/health          # {"ok":true}
+curl -I http://localhost:5173              # HTTP 200
+
+# View logs
+docker compose logs backend | tail -20     # Check startup messages
+docker compose logs frontend | tail -20    # Check Vite dev server
+
+# Cleanup
+docker compose down -v
+```
+
+**Production Docker stack with MLflow:**
+
+```bash
+docker compose -f docker-compose.prod.yml up -d && sleep 60
+
+# Services: backend (8000), frontend (5173), mlflow (5000), postgres (5432)
+docker compose -f docker-compose.prod.yml ps
+
+# MLflow UI
+open http://localhost:5000
+
+# Persistent storage
+docker volume ls | grep content-insights
+
+# Cleanup
+docker compose -f docker-compose.prod.yml down -v
+```
+
+### Troubleshooting Developer Issues
+
+| Problem | Diagnosis | Solution |
+|---------|-----------|----------|
+| Backend fails to load models | Check `models/` directory exists | Run notebook first or download artifacts |
+| "Connection refused" on port 8000 | Port already in use | `lsof -ti:8000 \| xargs kill -9` |
+| Frontend shows "API Error" | Backend not running or CORS issue | Check port 8000 listening: `curl localhost:8000/health` |
+| Models appear stale | Notebook not re-executed | Run notebook: `jupyter lab notebooks/01_exploration_v2.ipynb` |
+| MLflow data missing | Tracking URI not set | Use: `MLFLOW_TRACKING_URI=file:./mlruns python -m scripts.train_pipeline` |
+| Git push fails | Pre-commit hooks error | Check: `black`, `isort`, `flake8` via `pre-commit run --all-files` |
+
+---
+
 ## 🔧 System Requirements
 
 **Development Environment:**
