@@ -129,7 +129,7 @@ npm run dev
 
 #### 5. **Predictive Modeling** ([backend/app/analysis_predictive.py](backend/app/analysis_predictive.py))
 
-**Core Model:** RandomForestRegressor (50 estimators, max_depth=10)
+**Core Model:** RandomForestRegressor (400 estimators, max_depth=12, min_samples_leaf=2)
 - **Target Variable**: engagement_rate prediction
 - **Feature Engineering**: 30+ derived features (categorical encoding, temporal features, normalized metrics)
 - **Validation Strategy**: 80/20 train/test split
