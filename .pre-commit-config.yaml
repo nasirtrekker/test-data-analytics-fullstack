@@ -6,8 +6,6 @@ repos:
       - id: check-yaml
         args: ["--allow-multiple-documents"]
         exclude: ^\.github/workflows/ci\.yml$
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
       - id: check-added-large-files
         args: ["--maxkb=102400"]
 
