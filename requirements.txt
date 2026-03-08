@@ -8,6 +8,10 @@ mapie>=0.8
 pydantic>=2.6
 pydantic-settings>=2.2
 
+# MLOps
+mlflow>=2.10
+psycopg2-binary>=2.9
+
 # Dev / testing / tooling
 pytest>=8.0
 httpx>=0.27

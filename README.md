@@ -1,44 +1,294 @@
-# Content Performance Insights Dashboard - Blenda Labs Take-Home Assignment
+# Blenda Test Data Analytics Full Stack Solution
 
-## 📋 Assignment Overview
+A full-stack analytics platform for short-form video performance analysis, combining ML-powered insights with interactive visualizations.
 
-**Candidate**: *[Your Name]*
-**Position**: Solutions Engineer
-**Submitted**: March 2026
+## Tech Stack
 
-This is a full-stack analytics platform for short-form video performance analysis, built to demonstrate:
-- ✅ **Data Engineering**: Robust ETL pipeline with validation and feature engineering
-- ✅ **Analytics Methods**: 5+ analysis techniques (clustering, anomaly detection, predictive modeling with uncertainty quantification, trend analysis, similarity search)
-- ✅ **ML Engineering**: MAPIE conformal prediction, SHAP explainability, model versioning
-- ✅ **Full-Stack Development**: FastAPI backend + React/TypeScript frontend + Docker orchestration
-- ✅ **Production Practices**: Pre-commit hooks, CI/CD, comprehensive testing, monitoring readiness
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=flat&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?style=flat&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=flat&logo=vite&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5?style=flat&logo=kubernetes&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/CI/CD-GitHub_Actions-2088FF?style=flat&logo=github-actions&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.4+-F7931E?style=flat&logo=scikit-learn&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-2.2+-150458?style=flat&logo=pandas&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Ready-4169E1?style=flat&logo=postgresql&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-2.10+-0194E2?style=flat&logo=mlflow&logoColor=white)
+![Recharts](https://img.shields.io/badge/Recharts-Visualization-8884d8?style=flat&logo=chart.js&logoColor=white)
 
-**Key Technologies**: Python 3.12, FastAPI, React, TypeScript, Vite, scikit-learn, MAPIE, SHAP, Docker, pytest
+## 🚀 Quick Start (3 Commands)
+
+```bash
+# 1. Build and start all services (backend + frontend)
+docker compose up --build -d && sleep 30
+
+# 2. Open dashboard in browser
+open http://localhost:5173              # macOS
+# OR: xdg-open http://localhost:5173    # Linux
+# OR: visit http://localhost:5173       # Windows
+
+# 3. Verify API health
+curl http://localhost:8000/health       # Should return: {"status":"healthy"}
+
+# Cleanup when done
+docker compose down -v
+```
+
+**For complete testing guide (local environment, MLflow, production Docker, git push), see [Quick Start - Local Testing Guide](#-quick-start---local-testing-guide) below.**
 
 ---
 
-## 🏗️ Production-Ready Infrastructure
+## Features
 
-**Note**: This repository includes additional DevOps and testing infrastructure beyond the core assignment requirements. These files demonstrate a production-ready skeleton for future deployment:
+### Analytics & ML
+- **Clustering Analysis**: K-Means + PCA for content segmentation
+- **Similarity Search**: TF-IDF and vector embeddings for content recommendations
+- **Trend Detection**: Time series analysis for performance patterns
+- **Predictive Models**: MAPIE conformal prediction with SHAP explainability
+- **Anomaly Detection**: Isolation Forest for outlier identification
 
-### Included Infrastructure Files:
-- **CI/CD Pipeline**: `.github/workflows/ci.yml` - Automated testing and build validation on every push
+### Data Engineering
+- **ETL Pipeline**: Robust data ingestion with validation and feature engineering
+- **Schema Design**: Type-safe data models with Pydantic
+- **API Integration**: RESTful endpoints with FastAPI
+
+### Full-Stack Implementation
+- **Backend**: Python + FastAPI for API services
+- **Frontend**: React + TypeScript + Vite for interactive dashboards
+- **Visualization**: Recharts for charts and scatter plots
+
+### Infrastructure
+- **Database**: PostgreSQL backend for MLflow experiment tracking (production)
+- **MLOps**: MLflow tracking integrated for training and inference metrics
+- **Containerization**: Docker Compose for multi-service orchestration
+- **DevOps**: CI/CD with GitHub Actions, pre-commit hooks, automated testing
+
+---
+
+## Production Infrastructure
+
+### DevOps & Automation
+- **CI/CD Pipeline**: `.github/workflows/ci.yml` - Automated testing and build validation
 - **Pre-commit Hooks**: `.pre-commit-config.yaml` + `Makefile` - Code quality gates (black, isort, flake8, pytest)
-- **Docker Orchestration**: `docker-compose.yml`, `docker-compose.prod.yml` - Multi-environment deployment
-- **Kubernetes Deployment**: `k8s-deployment.yaml` - Production orchestration template
-- **Monitoring Setup**: `MONITORING.md`, `GITHUB_ACTIONS.md` - Observability and automation documentation
-- **Testing Framework**: `backend/tests/`, `pytest` configuration - Comprehensive test coverage
-- **Training Pipeline**: `Dockerfile.training`, `scripts/train_pipeline.py` - Model retraining automation
+- **Docker Orchestration**: `docker-compose.yml` (dev), `docker-compose.prod.yml` (production with MLflow + PostgreSQL)
+- **Kubernetes Ready**: `k8s-deployment.yaml` - Production orchestration template
+- **Environment Management**: `.env.development`, `.env.production` - Separate configs for dev/prod
 
-### Purpose:
-While the assignment focuses on analytics and full-stack development, these files showcase enterprise-grade practices including:
-- ✅ Automated testing and linting on every commit
-- ✅ Containerized deployment with health checks
-- ✅ Model versioning and artifact management
-- ✅ Scalable infrastructure patterns (Kubernetes-ready)
-- ✅ Documentation for operations and monitoring
+### MLOps & Experiment Tracking
+- **MLflow Integration**: Tracks training metrics, model parameters, and inference performance
+- **Training Tracking**: `scripts/train_pipeline.py` logs parameters (n_estimators, features), metrics (MSE, R², feature importances), and model artifacts
+- **Inference Tracking**: `backend/app/analysis_predictive.py` logs prediction metrics (MAE, R², coverage, interval widths) and SHAP availability
+- **Production Setup**: PostgreSQL backend for MLflow metadata storage in `docker-compose.prod.yml`
+- **Graceful Degradation**: Works without MLflow if not configured (development mode)
 
-**For Assignment Review**: The core deliverables are in `backend/app/`, `frontend/src/`, and the notebooks. The infrastructure files are optional bonus content demonstrating production experience.
+#### MLflow Dashboard
+
+**Access MLflow Tracking UI:**
+
+```bash
+# Option 1: Local Development (file-based tracking)
+# Start MLflow UI server pointing to local mlruns/ directory
+MLFLOW_TRACKING_URI=file:./mlruns mlflow ui --port 5000
+
+# Open browser: http://localhost:5000
+# View: Experiments, runs, parameters, metrics, artifacts
+
+# Option 2: Production Docker Stack
+docker compose -f docker-compose.prod.yml up -d
+# MLflow UI: http://localhost:5000
+# Backend API: http://localhost:8000
+```
+
+**MLflow Dashboard Features:**
+- **Experiments**: `content-insights-training` (model training), `content-insights-inference` (API predictions)
+- **Run Comparison**: Compare model versions, hyperparameters, and metrics across training runs
+- **Model Registry**: Browse logged RandomForest and KMeans models with version history
+- **Artifacts**: Download feature_columns.json, model_manifest.json, and trained models
+- **Metrics Visualization**: Line charts for MSE, R², feature importances over time
+
+### Testing & Quality
+- **Automated Testing**: `backend/tests/` with pytest, 5 test suites covering ETL, API, and pipelines
+- **Linting**: flake8, black, isort for code consistency
+- **Type Safety**: mypy for Python, TypeScript strict mode for frontend
+
+### Monitoring & Documentation
+- **Health Checks**: `/health` endpoint, Docker healthcheck configurations
+- **Documentation**: Comprehensive guides in [`docs/`](docs/) folder (see [Documentation](#-documentation) section below)
+
+### Model Management
+- **Version Control**: `models/manifest.json` tracks model versions
+- **Training Pipeline**: `scripts/train_pipeline.py` for retraining workflows
+- **Artifact Storage**: Joblib-serialized models with version metadata
+
+---
+
+## System Architecture
+
+### High-Level Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        UI[React Dashboard<br/>TypeScript + Vite<br/>Port 3000]
+        UI_COMPONENTS[Components:<br/>- Overview Panel<br/>- Clustering Scatter<br/>- Anomalies Table<br/>- Predictive Panel<br/>- Similar Videos Panel]
+    end
+
+    subgraph "API Layer"
+        API[FastAPI Backend<br/>Python 3.12<br/>Port 8000]
+        HEALTH[/health endpoint]
+        METRICS[/metrics endpoint]
+        CLUSTERING[/clustering endpoint]
+        ANOMALY[/anomalies endpoint]
+        PREDICTIVE[/predictive endpoint]
+        TRENDS[/trends endpoint]
+        SIMILAR[/similar endpoint]
+    end
+
+    subgraph "Data Processing Layer"
+        ETL[ETL Pipeline<br/>etl.py]
+        FEATURE[Feature Engineering<br/>feature_utils.py]
+        VALIDATION[Data Validation<br/>Pydantic Models]
+    end
+
+    subgraph "Analytics Engine"
+        CLUSTER_ENGINE[Clustering Analysis<br/>K-Means + PCA<br/>analysis_clustering.py]
+        ANOMALY_ENGINE[Anomaly Detection<br/>Isolation Forest<br/>analysis_anomaly.py]
+        PREDICTIVE_ENGINE[Predictive Models<br/>MAPIE + SHAP<br/>analysis_predictive.py]
+        TRENDS_ENGINE[Trend Analysis<br/>Time Series<br/>analysis_trends.py]
+        EMBEDDING_ENGINE[Similarity Search<br/>TF-IDF + Embeddings<br/>analysis_embeddings.py]
+    end
+
+    subgraph "ML Model Registry"
+        MODELS[Model Artifacts<br/>models/ directory]
+        CLUSTERS_MODEL[clusters_v2.joblib<br/>K-Means model]
+        PREDICTIVE_MODEL[predictive_mapie.joblib<br/>94MB MAPIE model]
+        TFIDF_MODEL[title_tfidf.joblib<br/>2MB vectorizer]
+        EMBEDDINGS_MODEL[title_embeddings.joblib<br/>1.5MB vectors]
+        SHAP_MODEL[shap_sample.joblib<br/>55KB explainer]
+        MANIFEST[manifest.json<br/>Version tracking]
+    end
+
+    subgraph "Data Sources"
+        CSV[sample_videos.csv<br/>98KB input data<br/>~180 videos]
+    end
+
+    subgraph "Infrastructure"
+        DOCKER[Docker Compose<br/>Multi-container orchestration]
+        CI[GitHub Actions<br/>CI/CD Pipeline]
+        PRECOMMIT[Pre-commit Hooks<br/>Code quality gates]
+    end
+
+    %% Data Flow
+    CSV --> ETL
+    ETL --> VALIDATION
+    VALIDATION --> FEATURE
+    FEATURE --> CLUSTER_ENGINE
+    FEATURE --> ANOMALY_ENGINE
+    FEATURE --> PREDICTIVE_ENGINE
+    FEATURE --> TRENDS_ENGINE
+    FEATURE --> EMBEDDING_ENGINE
+
+    %% Model Loading
+    MODELS --> CLUSTER_ENGINE
+    CLUSTERS_MODEL --> CLUSTER_ENGINE
+    PREDICTIVE_MODEL --> PREDICTIVE_ENGINE
+    SHAP_MODEL --> PREDICTIVE_ENGINE
+    TFIDF_MODEL --> EMBEDDING_ENGINE
+    EMBEDDINGS_MODEL --> EMBEDDING_ENGINE
+    MANIFEST --> MODELS
+
+    %% API Routing
+    CLUSTER_ENGINE --> CLUSTERING
+    ANOMALY_ENGINE --> ANOMALY
+    PREDICTIVE_ENGINE --> PREDICTIVE
+    TRENDS_ENGINE --> TRENDS
+    EMBEDDING_ENGINE --> SIMILAR
+
+    %% API Gateway
+    CLUSTERING --> API
+    ANOMALY --> API
+    PREDICTIVE --> API
+    TRENDS --> API
+    SIMILAR --> API
+    HEALTH --> API
+    METRICS --> API
+
+    %% Frontend Communication
+    API -->|REST API<br/>JSON responses| UI
+    UI --> UI_COMPONENTS
+
+    %% Infrastructure
+    DOCKER -.->|Containerizes| API
+    DOCKER -.->|Containerizes| UI
+    CI -.->|Validates| API
+    PRECOMMIT -.->|Quality checks| API
+
+    style UI fill:#4FC3F7,stroke:#0277BD,stroke-width:2px
+    style API fill:#66BB6A,stroke:#2E7D32,stroke-width:2px
+    style PREDICTIVE_ENGINE fill:#FFA726,stroke:#EF6C00,stroke-width:2px
+    style MODELS fill:#AB47BC,stroke:#6A1B9A,stroke-width:2px
+    style CSV fill:#FFEB3B,stroke:#F57F17,stroke-width:2px
+```
+
+### Component Details
+
+| Layer | Component | Technology | Purpose |
+|-------|-----------|------------|---------|
+| **Frontend** | React Dashboard | TypeScript, Vite, Recharts | Interactive data visualization |
+| **API** | FastAPI Backend | Python 3.12, Uvicorn | RESTful API endpoints |
+| **ETL** | Data Pipeline | Pandas, Pydantic | Data ingestion & validation |
+| **Analytics** | Clustering | K-Means, PCA, scikit-learn | Content segmentation |
+| **Analytics** | Anomaly Detection | Isolation Forest | Outlier identification |
+| **Analytics** | Predictive Models | MAPIE, SHAP, XGBoost | Performance forecasting with uncertainty |
+| **Analytics** | Trend Analysis | Time series analysis | Temporal pattern detection |
+| **Analytics** | Similarity Search | TF-IDF, Embeddings | Content recommendation |
+| **Storage** | Model Registry | Joblib artifacts | Versioned ML models |
+| **Infrastructure** | Docker | docker-compose.yml | Container orchestration |
+| **DevOps** | CI/CD | GitHub Actions | Automated testing & deployment |
+
+### Data Flow Architecture
+
+```
+┌─────────────┐
+│ Raw CSV Data│
+│ 180 videos  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────┐
+│  ETL Pipeline   │ ◄── Validation, Cleaning, Type Conversion
+└──────┬──────────┘
+       │
+       ▼
+┌─────────────────────────┐
+│  Feature Engineering    │ ◄── Derived metrics, Normalization
+└──────┬──────────────────┘
+       │
+       ├────────────────────┐
+       │                    │
+       ▼                    ▼
+┌─────────────┐      ┌─────────────────┐
+│  ML Models  │      │  Analytics APIs │
+│ (Pre-trained)│      │  (5 endpoints)  │
+└──────┬──────┘      └────────┬────────┘
+       │                      │
+       └──────────┬───────────┘
+                  │
+                  ▼
+          ┌───────────────┐
+          │  JSON Results │ ◄── Frontend Visualization
+          └───────────────┘
+```
+
+### Key Architectural Decisions
+
+1. **Stateless API Design**: All analytics computed on-demand from CSV data
+2. **Pre-trained Models**: Models loaded at startup, versioned via manifest.json
+3. **Containerized Deployment**: Backend + Frontend in separate Docker containers
+4. **RESTful Interface**: Standard HTTP/JSON for frontend-backend communication
+5. **Client-side Rendering**: React SPA with dynamic data fetching
 
 ---
 
@@ -174,31 +424,50 @@ docker rmi test_blenda_takehome-backend test_blenda_takehome-frontend
 Only needed if Docker tests fail or you want to debug specific issues.
 
 ```bash
-# Create virtual environment
+# 1. Create and activate virtual environment
 ./setup_venv.sh
 source .venv/bin/activate
 
-# Install backend in editable mode
+# 2. Install all dependencies (including MLflow)
+pip install -r requirements.txt
 pip install -e backend/
 
-# Run backend tests locally
-cd backend && pytest tests/ -v && cd ..
+# 3. Verify installation
+python --version                    # Should be 3.11+
+pip list | grep mlflow              # Should show mlflow 2.10+
 
-# (Optional) Start backend manually
+# 4. Run training pipeline with MLflow tracking
+MLFLOW_TRACKING_URI=file:./mlruns python -m scripts.train_pipeline
+# Expected output: "✓ MLflow tracking complete. Run ID: <uuid>"
+
+# 5. Start MLflow UI to view training metrics
+mlflow ui --port 5000 &
+# Open browser: http://localhost:5000
+# You should see "content-insights-training" experiment with logged runs
+
+# 6. Run backend tests locally
+cd backend && pytest tests/ -v && cd ..
+# Expected: 5 passed
+
+# 7. Start backend API with MLflow inference tracking
 export APP_DATA_PATH=./sample_videos.csv
-cd backend && uvicorn app.main:app --reload &
+export MLFLOW_TRACKING_URI=file:./mlruns
+cd backend && uvicorn app.main:app --reload --port 8000 &
 cd ..
 
-# Test API
+# 8. Test API endpoints
 curl http://localhost:8000/health
+curl http://localhost:8000/insights | jq '.predictive_model.metrics'
+# Check MLflow UI - you should see new run in "content-insights-inference" experiment
 
-# (Optional) Start frontend
+# 9. (Optional) Start frontend
 cd frontend && npm install && npm run dev &
 cd ..
 
 # Visit http://localhost:5173 in browser
 
-# Cleanup: kill processes when done
+# 10. Cleanup: kill processes when done
+pkill -f mlflow
 pkill -f uvicorn
 pkill -f vite
 deactivate
@@ -206,42 +475,145 @@ deactivate
 
 #### **Step 7: Production Docker Compose Test** (Optional)
 
-Tests production configuration with MLflow tracking.
+Tests production configuration with PostgreSQL + MLflow tracking server.
 
 ```bash
-# Start production stack
+# 1. Stop development stack if running
+docker compose down -v
+
+# 2. Start production stack (PostgreSQL + MLflow + Backend + Frontend)
 docker compose -f docker-compose.prod.yml up --build -d
 
-# Verify services
+# 3. Wait for services to initialize (60 seconds)
+sleep 60
+
+# 4. Verify all services are healthy
 docker compose -f docker-compose.prod.yml ps
+# Expected: All 4 services showing "running" status
+#   - mlflow-database (PostgreSQL)
+#   - mlflow-tracking (MLflow server)
+#   - content-insights-api (Backend)
+#   - content-insights-ui (Frontend)
 
-# Test endpoints
-curl http://localhost:8000/health    # Backend
-curl -I http://localhost:80          # Frontend (production port 80)
-curl -I http://localhost:5000        # MLflow UI
+# 5. Check service logs
+docker compose -f docker-compose.prod.yml logs mlflow-tracking | tail -20
+docker compose -f docker-compose.prod.yml logs backend | grep -i mlflow
 
-# Cleanup
+# 6. Test endpoints
+curl http://localhost:8000/health    # Backend API
+curl -I http://localhost:80          # Frontend (production uses port 80)
+curl -I http://localhost:5000        # MLflow UI Dashboard
+
+# 7. Open MLflow Dashboard in browser
+# Visit: http://localhost:5000
+# You should see experiments stored in PostgreSQL backend
+
+# 8. Trigger inference to log MLflow run
+curl http://localhost:8000/insights | jq '.predictive_model.metrics'
+# Check MLflow UI - new run should appear in "content-insights-inference"
+
+# 9. Inspect PostgreSQL database (optional)
+docker compose -f docker-compose.prod.yml exec mlflow-db psql -U mlflow_user -d mlflow_db -c "\dt"
+# Shows MLflow metadata tables
+
+# 10. Cleanup
 docker compose -f docker-compose.prod.yml down -v
+# Use -v flag to remove volumes (PostgreSQL data)
 ```
 
-#### **Step 8: Final Pre-Push Checklist**
+**Production Stack Architecture:**
+```
+mlflow-database (PostgreSQL:5432)  ←─── MLflow metadata storage
+        │
+        ├──→ mlflow-tracking (MLflow:5000) ←─── UI Dashboard
+                    │
+                    └──→ content-insights-api (Backend:8000)
+                                │
+                                └──→ content-insights-ui (Frontend:80)
+```
+
+#### **Step 8: Git Commit and Push to GitHub**
+
+After all tests pass, commit and push your changes.
+
+```bash
+# 1. Check current git status
+git status
+# You should see modified files: requirements.txt, README.md, backend files, etc.
+# Untracked files: .env.development, .env.production, .env.example, ENVIRONMENT_BEST_PRACTICES.md
+
+# 2. Add all relevant files
+git add requirements.txt
+git add backend/pyproject.toml backend/app/analysis_predictive.py backend/app/settings.py
+git add scripts/train_pipeline.py
+git add README.md ENVIRONMENT_BEST_PRACTICES.md
+git add .env.development .env.production .env.example
+git add docker-compose.yml docker-compose.prod.yml
+
+# 3. Check what will be committed
+git diff --cached --name-only
+
+# 4. Run pre-commit hooks (checks code quality)
+git add -A  # Pre-commit works on staged files
+pre-commit run --all-files
+# Expected: All hooks passing (6/6)
+
+# 5. Commit with descriptive message
+git commit -m "Add MLflow tracking, environment management, and enhanced architecture docs
+
+- Integrated MLflow experiment tracking for training and inference
+- Added requirements.txt MLflow dependencies (mlflow>=2.10, psycopg2-binary>=2.9)
+- Enhanced backend/app/settings.py with environment-aware configuration
+- Created .env templates for development/production separation
+- Updated README with MLflow dashboard guide and comprehensive testing steps
+- Added ENVIRONMENT_BEST_PRACTICES.md for configuration management
+- Enhanced docker-compose.prod.yml with PostgreSQL + MLflow stack
+- Training pipeline logs parameters, metrics, and model artifacts
+- API inference tracking logs prediction metrics and feature importances"
+
+# 6. Push to GitHub
+git push origin main
+
+# Expected output:
+# Enumerating objects: X, done.
+# Counting objects: 100% (X/X), done.
+# Delta compression using up to N threads
+# Compressing objects: 100% (Y/Y), done.
+# Writing objects: 100% (Z/Z), done.
+# Total Z (delta W), reused 0 (delta 0)
+# To github.com:YOUR_USERNAME/test-data-analytics-fullstack.git
+#    abc1234..def5678  main -> main
+
+# 7. Verify push succeeded
+git status
+# Expected: "Your branch is up to date with 'origin/main'."
+
+# 8. Check GitHub Actions CI/CD
+# Visit: https://github.com/YOUR_USERNAME/test-data-analytics-fullstack/actions
+# Verify: Latest workflow run shows green checkmark ✅
+```
+
+#### **Step 9: Final Pre-Push Checklist**
 
 Before `git push`, verify:
 
 - [ ] Docker compose test passed (Step 3) ✅
 - [ ] All 5 pytest tests pass ✅
 - [ ] Dashboard opens and all panels render ✅
+- [ ] MLflow tracking tested locally (Step 6) ✅
 - [ ] No sensitive files committed (check `.gitignore`)
 - [ ] Models directory committed (`.joblib` files present)
-- [ ] `make prepush` completes successfully ✅
+- [ ] `mlruns/` NOT committed (should be in `.gitignore`) ✅
+- [ ] `.env.local` NOT committed (only templates: `.env.example`, `.env.development`, `.env.production`) ✅
 - [ ] This README accurately describes your implementation
 - [ ] Screenshots exist and match README references
 
 ```bash
 # Final verification commands
 git status                          # Check for unexpected files
-ls models/*.joblib                  # Verify models present
-grep -r "API_KEY\|SECRET\|PASSWORD" --exclude-dir=.git  # Check for leaked secrets
+ls models/*.joblib                  # Verify models present (should see 10+ files)
+grep -r "API_KEY\|SECRET\|PASSWORD" --exclude-dir=.git --exclude-dir=.env  # Check for leaked secrets
+cat .gitignore | grep -E "mlruns|.env.local"  # Verify MLflow and local env ignored
 docker compose up --build -d && sleep 30 && \
   curl -f http://localhost:8000/health && \
   curl -I http://localhost:5173 && \
@@ -308,11 +680,9 @@ Production-oriented compose:
 docker-compose -f docker-compose.prod.yml up --build
 ```
 
-## Approach
+## Implementation Approach
 
-The implementation is intentionally mapped to the three assignment pillars.
-
-### Part 1: Data Processing
+### Data Processing
 
 Core ETL is implemented in `backend/app/etl.py` with explicit schema and quality controls.
 
@@ -328,18 +698,18 @@ Processing stages:
 
 Notebook (`notebooks/01_exploration_v2.ipynb`) extends this with additional analysis features such as `virality_score`, `virality_rate`, and `days_since_publish`.
 
-### Part 2: Insights and Analysis
+### Analytics & Insights
 
-Implemented analytics methods (assignment asks for at least two):
+Implemented analytics methods:
 - Clustering: KMeans plus DBSCAN for centroidal and density-based segmentation.
 - Trend/correlation analysis: aggregated and rank-based associations.
 - Embeddings/similarity: TF-IDF retrieval with optional semantic embedding extension.
 - Anomaly detection: IsolationForest outlier scoring.
 - Predictive modeling: RandomForest regression with MAPIE Jackknife+/CrossConformal uncertainty intervals.
 
-### Part 3: Visualization
+### Dashboard Visualization
 
-Interactive dashboard is implemented as a typed React SPA:
+Built as a typed React SPA with:
 - KPI overview cards.
 - Dynamic filter controls (category, thumbnail style, date window).
 - Clustering panel.
@@ -481,21 +851,21 @@ Build/deploy integration:
 | `frontend/src/` | Typed React SPA implementation |
 | `models/` | Persisted model artifacts and manifest files |
 | `scripts/train_pipeline.py` | Programmatic training workflow runner |
-| `sample_videos.csv` | Assignment input dataset |
+| `sample_videos.csv` | Sample video dataset (180 videos) |
 | `docker-compose.yml` | Development multi-service orchestration |
 | `docker-compose.prod.yml` | Production-oriented service orchestration |
 | `setup_venv.sh` | Local Python environment bootstrap |
 
-### Assignment Traceability Matrix
+### Implementation Checklist
 
-| Requirement | Status | Evidence |
+| Feature | Status | Implementation |
 |---|---|---|
-| Load and clean data | Complete | `backend/app/etl.py` |
-| Derived metrics | Complete | `backend/app/etl.py`, notebook feature engineering cells |
-| Validation/error handling | Complete | Schema checks, coercion, and row filtering in ETL |
-| At least two analytics methods | Complete | Clustering, anomalies, trends, embeddings, predictive modeling |
-| Interactive dashboard | Complete | React dashboard with filters and analysis panels |
-| README with setup/approach/insights/decisions/improvements | Complete | This document |
+| Data loading & cleaning | ✅ Complete | `backend/app/etl.py` |
+| Derived metrics | ✅ Complete | `backend/app/etl.py`, notebook feature engineering |
+| Validation & error handling | ✅ Complete | Schema checks, coercion, row filtering in ETL |
+| Multiple analytics methods | ✅ Complete | 5 techniques: clustering, anomalies, trends, embeddings, predictive |
+| Interactive dashboard | ✅ Complete | React SPA with filters and 5 analysis panels |
+| Documentation | ✅ Complete | Setup, architecture, insights, decisions |
 
 ## Given More Time
 
@@ -503,7 +873,6 @@ Build/deploy integration:
 - Add predictive hyperparameter search (RandomizedSearchCV/Optuna) with cross-validated model selection.
 - Parameterize and document reference-date strategy (`days_since_publish`).
 - Add temporal holdout/rolling-window evaluation to better mirror production forecasting.
-- Integrate MLflow in training/inference code paths (`mlflow.start_run`, `log_params`, `log_metrics`, `log_artifact`) so experiment tracking is not only infrastructure-level.
 - Add optional LLM-based analysis layer (OpenAI or compatible API) for narrative insight summaries, anomaly explanations, and recommendation text generation with prompt/version logging.
 - Expand backend and frontend test coverage with CI gates.
 - Add reproducibility checks for notebook outputs and metric drift thresholds.
@@ -517,7 +886,7 @@ This repository includes multiple .md files serving different purposes:
 
 | File | Purpose | Status | Use When |
 |---|---|---|---|
-| [README.md](README.md) | **Primary assignment submission** - Complete setup, approach, insights, decisions | ✅ Current | Reviewing submission requirements |
+| [README.md](README.md) | **Main documentation** - Setup, architecture, implementation approach | ✅ Current | Getting started and understanding the project |
 | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) | **Comprehensive execution guide** - Detailed notebook cell breakdown, architecture diagrams, troubleshooting | ✅ Current | Deep-diving into implementation details |
 | [DOCKER_GUIDE.md](DOCKER_GUIDE.md) | **Docker command reference** - Build/run individual services, volume management | ✅ Current | Working with containers directly |
 | [DOCKER_COMPOSE_GUIDE.md](DOCKER_COMPOSE_GUIDE.md) | **Compose orchestration** - Dev vs prod configurations, networking, scaling | ✅ Current | Multi-service deployment |
@@ -569,4 +938,41 @@ For detailed troubleshooting, see the [Step-by-Step Testing Guide](#-quick-start
 
 ---
 
-## 📦 Detailed Setup Instructions
+## � Documentation
+
+All documentation files are organized in the [`docs/`](docs/) directory:
+
+### Guides & References
+
+| Document | Description |
+|----------|-------------|
+| [**ENVIRONMENT_BEST_PRACTICES.md**](docs/ENVIRONMENT_BEST_PRACTICES.md) | Complete guide to `.env` file management, configuration loading order, dev/prod separation, security best practices |
+| [**GITHUB_ACTIONS.md**](docs/GITHUB_ACTIONS.md) | CI/CD pipeline documentation, workflow configuration, automated testing setup |
+| [**MONITORING.md**](docs/MONITORING.md) | Application monitoring, health checks, logging strategies, performance metrics |
+| [**DOCKER_COMPOSE_GUIDE.md**](docs/DOCKER_COMPOSE_GUIDE.md) | Docker Compose configurations for development and production environments |
+| [**DOCKER_GUIDE.md**](docs/DOCKER_GUIDE.md) | Docker containerization guide, Dockerfile explanations, multi-stage builds |
+| [**PYTEST_TESTING.md**](docs/PYTEST_TESTING.md) | Testing framework documentation, test coverage, writing new tests |
+| [**PUSH_TO_GITHUB.md**](docs/PUSH_TO_GITHUB.md) | Git workflow, commit conventions, pre-push checklist |
+| [**PUSH_CHECKLIST.md**](docs/PUSH_CHECKLIST.md) | Quick checklist before pushing code to GitHub |
+| [**PROJECT_SUMMARY.md**](docs/PROJECT_SUMMARY.md) | High-level project overview, architecture decisions, technology choices |
+
+### Quick Links by Topic
+
+**Getting Started:**
+- New to the project? Start with [PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)
+- Setting up environment? See [ENVIRONMENT_BEST_PRACTICES.md](docs/ENVIRONMENT_BEST_PRACTICES.md)
+- First time with Docker? Read [DOCKER_GUIDE.md](docs/DOCKER_GUIDE.md)
+
+**Development Workflow:**
+- Running tests: [PYTEST_TESTING.md](docs/PYTEST_TESTING.md)
+- Docker development: [DOCKER_COMPOSE_GUIDE.md](docs/DOCKER_COMPOSE_GUIDE.md)
+- Preparing to commit: [PUSH_CHECKLIST.md](docs/PUSH_CHECKLIST.md)
+
+**DevOps & Production:**
+- CI/CD pipeline: [GITHUB_ACTIONS.md](docs/GITHUB_ACTIONS.md)
+- Monitoring & health: [MONITORING.md](docs/MONITORING.md)
+- Git workflow: [PUSH_TO_GITHUB.md](docs/PUSH_TO_GITHUB.md)
+
+---
+
+## �📦 Detailed Setup Instructions

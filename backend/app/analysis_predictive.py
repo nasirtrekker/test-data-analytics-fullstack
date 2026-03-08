@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import io
+import os
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -13,6 +14,16 @@ from sklearn.metrics import mean_absolute_error, r2_score
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
+
+# MLflow tracking (optional, graceful degradation)
+try:
+    import mlflow
+
+    MLFLOW_AVAILABLE = True
+    MLFLOW_TRACKING_ENABLED = bool(os.getenv("MLFLOW_TRACKING_URI"))
+except ImportError:
+    MLFLOW_AVAILABLE = False
+    MLFLOW_TRACKING_ENABLED = False
 
 MAPIE_AVAILABLE = False
 MAPIE_API = "none"
@@ -330,6 +341,35 @@ def fit_predictive_with_conformal(
         },
         shap_summary=shap_summary,
     )
+
+    # MLflow tracking for inference metrics
+    if MLFLOW_AVAILABLE and MLFLOW_TRACKING_ENABLED:
+        try:
+            mlflow.set_experiment("content-insights-inference")
+            with mlflow.start_run(run_name="predictive_inference", nested=True):
+                # Log inference parameters
+                mlflow.log_param("test_size", test_size)
+                mlflow.log_param("alpha", alpha)
+                mlflow.log_param("n_samples", len(df))
+                mlflow.log_param("n_features", X.shape[1])
+                mlflow.log_param("method", method_name)
+
+                # Log metrics
+                mlflow.log_metric("mae", mae)
+                mlflow.log_metric("r2", r2)
+                mlflow.log_metric("coverage", coverage)
+                mlflow.log_metric("median_interval_width", qhat * 2.0)
+                mlflow.log_metric(
+                    "shap_available", 1.0 if shap_summary["available"] else 0.0
+                )
+
+                # Log top feature importances
+                for i, feat in enumerate(feat_imp[:5]):
+                    mlflow.log_metric(f"importance_rank_{i+1}", feat["importance"])
+        except Exception as e:
+            # Don't fail inference if MLflow logging fails
+            print(f"MLflow logging warning: {e}")
+
     return out, artifacts
 
 
