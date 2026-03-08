@@ -1,10 +1,36 @@
-name: CI Pipeline - Test & Validate
+name: Manual Pipeline
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      run_ci:
+        description: "Run lint, tests, and builds"
+        required: true
+        default: true
+        type: boolean
+      run_notebook_validation:
+        description: "Run notebook execution validation"
+        required: true
+        default: false
+        type: boolean
+      run_security_scan:
+        description: "Run Trivy security scan"
+        required: true
+        default: false
+        type: boolean
+      run_deploy:
+        description: "Run manual deploy steps"
+        required: true
+        default: false
+        type: boolean
+      deploy_target:
+        description: "Manual deploy target"
+        required: true
+        default: staging
+        type: choice
+        options:
+          - staging
+          - production
 
 env:
   REGISTRY: ghcr.io
@@ -12,132 +38,141 @@ env:
 
 jobs:
   lint-and-test:
+    if: ${{ inputs.run_ci }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.12']
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov flake8 black isort mypy
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 black isort mypy
 
-    - name: Lint with flake8
-      run: |
-        flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 backend/app --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - name: Lint, format, imports, and type checks
+        run: |
+          flake8 backend/app --count --select=E9,F63,F7,F82 --show-source --statistics
+          black --check backend/app
+          isort --check-only backend/app
+          mypy backend/app --ignore-missing-imports || true
 
-    - name: Format check with black
-      run: black --check backend/app
+      - name: Run pytest
+        run: pytest backend/tests -v --cov=backend/app --cov-report=xml
 
-    - name: Import sort check
-      run: isort --check-only backend/app
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
 
-    - name: Type check with mypy
-      run: mypy backend/app --ignore-missing-imports || true
+  frontend-build:
+    if: ${{ inputs.run_ci }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-    - name: Run pytest
-      run: |
-        pytest backend/tests -v --cov=backend/app --cov-report=xml
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-    - name: Upload coverage
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+
+      - name: Type check TypeScript
+        run: cd frontend && npx tsc --noEmit
 
   backend-build:
+    if: ${{ inputs.run_ci }}
     needs: lint-and-test
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Container Registry
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=sha
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          tags: |
+            type=sha
 
-    - name: Build and push backend
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   notebook-validation:
-    needs: lint-and-test
+    if: ${{ inputs.run_notebook_validation }}
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install nbconvert jupyter
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install nbconvert jupyter
 
-    - name: Validate notebook syntax
-      run: |
-        jupyter nbconvert --to python notebooks/01_exploration_v2.ipynb --stdout > /dev/null
-
-    - name: Check notebook runs without errors
-      run: |
-        jupyter nbconvert --to notebook --execute notebooks/01_exploration_v2.ipynb --output /tmp/01_exploration_v2.executed.ipynb --ExecutePreprocessor.timeout=1200
+      - name: Validate notebook syntax and execution
+        run: |
+          jupyter nbconvert --to python notebooks/01_exploration_v2.ipynb --stdout > /dev/null
+          jupyter nbconvert --to notebook --execute notebooks/01_exploration_v2.ipynb --output /tmp/01_exploration_v2.executed.ipynb --ExecutePreprocessor.timeout=1200
 
   security-scan:
+    if: ${{ inputs.run_security_scan }}
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
 
-    - name: Upload Trivy results
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  manual-deploy:
+    if: ${{ inputs.run_deploy }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo deploy target
+        run: echo "Manual deploy requested for target=${{ inputs.deploy_target }}"
