@@ -37,7 +37,6 @@ This directory contains comprehensive guides and references for the Blenda Test 
 | [**PUSH_TO_GITHUB.md**](PUSH_TO_GITHUB.md) | Git workflow, commit conventions | All contributors |
 | [**PUSH_CHECKLIST.md**](PUSH_CHECKLIST.md) | Quick pre-push validation steps | All contributors |
 | [**PROJECT_SUMMARY.md**](PROJECT_SUMMARY.md) | Architecture, tech stack, decisions | New team members |
-| [**README_OLD.md**](README_OLD.md) | Previous README version (archived) | Reference only |
 
 ---
 
