@@ -869,7 +869,7 @@ docker compose -f docker-compose.prod.yml up -d
 ## 🏗️ Project Structure
 
 ```
-test_blenda_takehome/
+test_data-analytics-fullstack/
 ├── backend/                    # FastAPI REST API service
 │   ├── app/
 │   │   ├── main.py            # API endpoint definitions
@@ -1266,7 +1266,7 @@ return (
 ```bash
 # 1. Clone repository
 git clone https://github.com/nasirtrekker/test-data-analytics-fullstack.git
-cd test_blenda_takehome
+cd test-data-analytics-fullstack
 
 # 2. Setup Python environment
 ./setup_venv.sh
