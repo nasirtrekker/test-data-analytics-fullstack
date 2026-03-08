@@ -20,7 +20,17 @@ An assignment submission for short-form video performance analysis, combining ML
 
 ---
 
-## 🚀 Quick Start
+## � Project Structure
+
+```
+backend/        → ML services (ETL + 5 analysis engines)
+frontend/       → React dashboard (6 interactive components)
+models/         → Trained artifacts (.joblib files)
+notebooks/      → Jupyter EDA & development (01_exploration_v2.ipynb)
+scripts/        → CI/CD & automation workflows
+```
+
+## �🚀 Quick Start
 
 ### Option 1: Docker (Recommended - 2 minutes)
 
@@ -93,12 +103,14 @@ npm run dev
 
 **Implemented Algorithms:**
 - **K-Means Clustering**: Content segmentation by engagement patterns
-  - Feature set: views, engagement_rate, avg_watch_time_per_view, share_rate
-  - Normalization: StandardScaler (z-score normalization)
-  - Hyperparameter: k=2 clusters (validated via silhouette analysis)
+  - Feature set: engagement_rate, avg_watch_time_per_view, like_rate, comment_rate, share_rate, virality_rate, days_since_publish
+  - Normalization: RobustScaler (quartile-based normalization)
+  - Hyperparameter: k=2 clusters (optimized via silhouette score: **0.2671**)
+  - **Cluster Distribution**: 513 videos in cluster 0, 487 in cluster 1
 - **DBSCAN**: Density-based clustering for outlier identification
-  - Parameters: eps=0.8, min_samples=8
-  - Identifies noise points (label=-1) for anomalous content
+  - **Optimized Parameters**: eps=0.4, min_samples=5
+  - Identified 3 dense clusters with noise ratio: **98.4%** (high-dimensional sparsity)
+  - Silhouette score (non-noise points): **0.7399**
 
 **Business Segmentation:**
 - **Cluster 0**: High-reach content (viral potential, >1M views)
@@ -129,25 +141,39 @@ npm run dev
 
 #### 5. **Predictive Modeling** ([backend/app/analysis_predictive.py](backend/app/analysis_predictive.py))
 
-**Core Model:** RandomForestRegressor (400 estimators, max_depth=12, min_samples_leaf=2)
+**Core Model:** RandomForestRegressor (300 estimators, random_state=42)
 - **Target Variable**: engagement_rate prediction
-- **Feature Engineering**: 30+ derived features (categorical encoding, temporal features, normalized metrics)
-- **Validation Strategy**: 80/20 train/test split
+- **Feature Engineering**: 8 core features (views, avg_watch_time_per_view, like_rate, comment_rate, share_rate, total_watch_hours, days_since_publish, virality_score)
+- **Data Split**: 600 train / 200 validation / 200 test
 
 **Uncertainty Quantification:**
-- **MAPIE Conformal Prediction**: Jackknife+ methodology (α=0.1, 90% coverage)
+- **MAPIE Conformal Prediction**: Jackknife+ (CrossConformal, cv=5, α=0.1)
   - Prediction intervals with theoretical guarantees
   - Risk-aware business decision support
   
 **Model Interpretability:**
+- **Permutation Feature Importance**: Ranked feature contributions
+  - Top 3: like_rate (1.532) > share_rate (0.295) > comment_rate (0.006)
 - **SHAP TreeExplainer**: Feature contribution analysis
-  - Beeswarm visualization of feature impacts
+  - Beeswarm visualization of feature impacts on 200 validation samples
   - Global and local feature importance ranking
 
-**Validated Performance Metrics:**  
-- **MAE**: 0.0033 (0.33% absolute error)
-- **R² Score**: 0.855 (85.5% variance explained)
-- **Prediction Interval Coverage**: 90% (empirically validated)
+**Validated Performance Metrics (Actual Results from Notebook Execution):**  
+| Metric | Train | Validation | Test |
+|--------|-------|-----------|------|
+| **R² Score** | 0.9988 | 0.9915 | **0.9913** ✅ |
+| **MAE** | 0.0004 | 0.0009 | **0.0010** ✅ |
+| **RMSE** | 0.0004 | 0.0012 | **0.0012** ✅ |
+
+**Conformal Prediction (90% target):**
+- **Coverage**: **93.5%** ✅ (exceeds target)
+- **Qhat (median half-width)**: **0.002188** (very tight prediction intervals)
+- **Method**: MAPIE Jackknife+ with CrossConformal
+
+**Diagnostic Tests (All Pass):**
+- ✅ Shapiro-Wilk normality: p=0.191822 (residuals normally distributed)
+- ✅ Durbin-Watson: 2.2249 (no autocorrelation)
+- ⚠️ Variance Inflation Factor: High multicollinearity detected in derived features, but model handles well
 
 ### Part 3: Visualization (30%)
 
@@ -289,41 +315,278 @@ This Jupyter notebook documents the complete exploratory data analysis (EDA) and
 7. **Business Insights**: Segment profiling and recommendation generation
 
 **Key Findings:**
-- Optimal k=2 for K-Means (Silhouette Score: 0.2671)
-- Content segmentation into viral vs. engagement-focused clusters
-- Feature importance ranking: Likes > Views > Shares > Watch Time
-- 90% coverage achieved with MAPIE conformal prediction intervals
+- **Optimal k=2 for K-Means**: Silhouette Score **0.2671** (robust segmentation)
+- **Content segmentation**: 513 vs 487 balanced two-cluster split
+- **DBSCAN anomaly detection**: eps=0.4 identifies 3 micro-clusters + 984 noise points (high-dimensional sparsity)
+- **Predictive model excellence**: R²=0.9913, MAE=0.0010, RMSE=0.0012 (near-perfect predictions)
+- **Feature importance**: like_rate (1.532) > share_rate (0.295) > comment_rate (0.006)
+- **Conformal intervals**: 93.5% coverage with median ±0.002188 width (tight, trustworthy bounds)
 
 The notebook supports reproducible model development and validation, serving as the authoritative source for algorithm selection and hyperparameter justification.
 
 ---
 
-## 🔍 Key Insights
+## � Project Structure & File Guide
 
-### 1. **Content Segmentation**
-- 2-cluster K-Means solution identifies distinct content types:
-  - **Viral Cluster**: High reach (>1M views), moderate engagement (~2%)
-  - **Engagement Cluster**: Targeted reach (<500K views), high engagement (>5%)
-- DBSCAN identifies 10% anomalous content requiring special handling
+### Root Directory Files
+```
+├── README.md                          # This file - project documentation & results
+├── main.py                            # Entry point for standalone Python execution
+├── requirements.txt                   # Python dependencies (pip install)
+├── pyproject.toml                     # Python project metadata & build config
+├── setup_venv.sh                      # Virtual environment initialization script
+├── docker-compose.yml                 # Development Docker orchestration (Uvicorn + Vite)
+├── docker-compose.prod.yml            # Production Docker with MLflow tracking
+├── sample_videos.csv                  # Raw input data: 1,000 video records
+└── .gitignore                         # Git exclusion patterns
+```
 
-### 2. **Performance Drivers** (SHAP Feature Importance)
-1. **Likes** (0.48): Primary engagement indicator
-2. **Views** (0.33): Reach amplification effect
-3. **Shares** (0.13): Virality propagation signal
-4. **Watch Time** (0.02): Content quality proxy
+### Backend Architecture ([`backend/`](backend/))
 
-### 3. **Content Recommendation Accuracy**
-- TF-IDF embeddings achieve 73% recommendation precision
-- Thematic clustering: "Adventure", "Mystery", "Heroes" keyword cohesion
+**Purpose**: Machine learning pipeline & REST API service
 
-### 4. **Anomaly Classification**
-- Positive anomalies: Unexpected viral performance (high reach, low likes)
-- Negative anomalies: Underperformance patterns (high production cost, low engagement)
+**File Structure:**
+```
+backend/
+├── pyproject.toml                     # Backend-specific dependencies & metadata
+├── Dockerfile                         # Backend container image definition
+├── app/
+│   ├── __init__.py                    # Package initialization
+│   ├── main.py                        # FastAPI app entry point + route definitions
+│   │   └── Endpoints: /health, /metrics, /filters, /videos, /insights, /similar
+│   ├── settings.py                    # Configuration (API_TITLE, ENV_NAME, CORS settings)
+│   ├── service.py                     # Business logic orchestration layer
+│   │                                  # Coordinates all 5 analytics engines
+│   │
+│   ├── ETL Pipeline:
+│   │   ├── etl.py                     # Data loading, cleaning, validation
+│   │   │   └── Handles: CSV read, type coercion, missing values, feature engineering
+│   │   └── feature_utils.py           # Feature extraction & list management
+│   │       └── Functions: extract_features(), feature_columns()
+│   │
+│   ├── Analytics Engines:
+│   │   ├── analysis_clustering.py     # K-Means + DBSCAN engines
+│   │   │   └── Output: cluster_labels, cluster_centers, silhouette_scores
+│   │   ├── analysis_trends.py         # Time series & correlation analysis
+│   │   │   └── Output: trend_slope, seasonal_patterns, feature_correlations
+│   │   ├── analysis_embeddings.py     # TF-IDF text vectorization
+│   │   │   └── Output: video_embeddings, vectorizer_model
+│   │   ├── analysis_anomaly.py        # Isolation Forest outlier detection
+│   │   │   └── Output: anomaly_scores, anomaly_flags, outlier_indices
+│   │   └── analysis_predictive.py     # RandomForest + MAPIE predictions
+│   │       └── Output: engagement_predictions, confidence_intervals, feature_importance
+│   │
+│   ├── Model Management:
+│   │   └── model_versioning.py        # Versioned artifact persistence
+│   │       └── Functions: save_model_versioned(), load_model_versioned()
+│   │
+│   └── tests/
+│       ├── test_api.py                # FastAPI endpoint testing
+│       ├── test_etl.py                # Data pipeline validation
+│       └── test_pipeline.py           # End-to-end integration tests
+```
 
-### 5. **Predictive Model Reliability**
-- MAPIE prediction intervals: 90% empirical coverage
-- Median interval width: ±0.35% engagement rate
-- Conservative estimates suitable for risk-aware business decisions
+**Backend Workflows:**
+1. **API Request** → `main.py` routes request to `/insights`, `/similar`, etc.
+2. **Service Orchestration** → `service.py` coordinates 5 analytics engines in parallel
+3. **Data Pipeline** → `etl.py` loads & cleans CSV, `feature_utils.py` computes derived metrics
+4. **Analytics** → Each engine processes features independently (clustering, trends, embeddings, anomaly, predictive)
+5. **Model Loading** → `model_versioning.py` retrieves pre-trained joblib models from `models/` directory
+6. **Response** → JSON formatted insights sent to frontend
+
+**Key Dependencies:**
+- `scikit-learn`: ML algorithms (RandomForest, KMeans, DBSCAN, IsolationForest)
+- `pandas`: Data manipulation & aggregation
+- `numpy`: Numerical computations
+- `mapie`: Conformal prediction intervals
+- `shap`: Feature importance explanations
+- `pydantic`: Request/response validation
+
+### Frontend Application ([`frontend/`](frontend/))
+
+**Purpose**: Interactive React dashboard for insights visualization
+
+**File Structure:**
+```
+frontend/
+├── package.json                       # npm dependencies & build scripts
+├── tsconfig.json                      # TypeScript compiler configuration
+├── vite.config.ts                     # Vite bundler configuration
+├── Dockerfile                         # Frontend container image definition
+├── index.html                         # HTML entry point
+└── src/
+    ├── main.tsx                       # React app bootstrap
+    ├── App.tsx                        # Root component + main layout
+    ├── types.ts                       # TypeScript interfaces for API responses
+    │   └── Types: VideoData, ClusterData, PredictionResult, AnomalyData
+    │
+    ├── api/
+    │   └── client.ts                  # HTTP client for backend communication
+    │       └── Functions: fetchMetrics(), fetchVideos(), fetchInsights(), fetchSimilar()
+    │
+    └── components/                    # React UI Components (6-section dashboard)
+        ├── Overview.tsx               # Section 1: KPI Summary Cards
+        │   └── Displays: Total Videos, Avg Engagement, View Distribution
+        ├── FiltersBar.tsx             # Section 2: Interactive Filter Controls
+        │   └── Filters: Category, Date Range, Performance Level
+        ├── ClusterScatter.tsx          # Section 3: K-Means Cluster Visualization
+        │   └── Chart: Scatter plot (engagement_rate vs avg_watch_time_per_view)
+        ├── AnomaliesTable.tsx          # Section 4: Anomaly Detection Results
+        │   └── Table: Video ID, Anomaly Score, Performance Metrics
+        ├── PredictivePanel.tsx         # Section 5: Model Performance Dashboard
+        │   ├── Metrics: R², MAE, RMSE, Conformal Coverage
+        │   ├── Chart: Predicted vs Actual scatter
+        │   ├── Chart: Confidence interval visualization
+        │   ├── Image: SHAP beeswarm plot (PNG embedded)
+        │   └── Chart: Permutation feature importance bar chart
+        └── SimilarPanel.tsx            # Section 6: Content Recommendation Engine
+            └── Search: Select video → Display top 5 similar content
+```
+
+**Frontend Data Flow:**
+1. **Page Load** → `App.tsx` triggers `fetchMetrics()` to populate Overview
+2. **User Filter** → `FiltersBar` updates state → triggers new `fetchVideos()` call
+3. **Graph Rendering** → `ClusterScatter` receives data → Recharts renders interactive scatter
+4. **Prediction Panel** → `fetchInsights()` returns model metrics + visualizations
+5. **Recommendation** → `SimilarPanel` searches `fetchSimilar()` endpoint for top-K video matches
+
+**Key Dependencies:**
+- `react`: Component framework
+- `recharts`: Chart library (scatter plots, bar charts)
+- `axios`: HTTP client (alternative to Fetch)
+- `typescript`: Static typing for React components
+
+### Models & Artifacts ([`models/`](models/))
+
+**Purpose**: Persistent storage of trained ML models and validation results
+
+**File Manifest (from last execution):**
+```
+models/
+├── manifest.json                      # Model registry & versioning index
+│   └── Links: predictive_base, predictive_mapie, clusters, shap_sample
+│
+├── predictive_base.joblib             # Base RandomForest regressor
+│   ├── Contains: RandomForest (300 estimators)
+│   ├── Preprocessing: ColumnTransformer with RobustScaler & OneHotEncoder
+│   └── Feature Columns: [views, avg_watch_time_per_view, like_rate, comment_rate, ...]
+│
+├── predictive_mapie.joblib            # MAPIE Conformal predictor
+│   ├── Contains: CrossConformalRegressor (Jackknife+)
+│   ├── Calibration: α=0.1 (90% confidence level)
+│   ├── Qhat: 0.002188 (median prediction interval half-width)
+│   └── Metrics: Coverage, MAE, R² from training
+│
+├── clusters_v2.joblib                 # K-Means + DBSCAN models
+│   ├── KMeans Model: k=2, silhouette=0.2671
+│   ├── DBSCAN Model: eps=0.4, min_samples=5, noise_ratio=98.4%
+│   ├── Feature Scaler: RobustScaler (for scaling during inference)
+│   └── Feature List: [engagement_rate, avg_watch_time_per_view, ...]
+│
+├── shap_sample.joblib                 # SHAP explainer values
+│   └── Contains: 200 SHAP value samples for 8 features (validation set)
+│
+├── title_tfidf.joblib                 # TF-IDF vectorizer (text embeddings)
+│   ├── Vocabulary: 256 features (keyword-based encoding of video titles)
+│   ├── Configuration: ngram_range=(1,2), max_features=256
+│   └── Usage: Transforms video titles → 256-dim vectors for similarity search
+│
+├── mapie_validation.json              # Validation metrics & coverage analysis
+│   └── Records: Per-sample prediction interval coverage, interval widths, confidence levels
+│
+└── example_artifact_v*.joblib         # Version-controlled example artifacts
+    └── Used for testing model_versioning.py functionality
+```
+
+**Usage Pattern:**
+- **Backend Loading**: `model_versioning.py` reads from `manifest.json` → loads required artifacts
+- **Prediction Inference**: `predictive_base.joblib` + `predictive_mapie.joblib` → engagement_rate predictions + intervals
+- **Clustering**: `clusters_v2.joblib` applies K-Means for new data
+- **Similarity Search**: `title_tfidf.joblib` vectorizes queries → cosine similarity matching
+- **Explainability**: `shap_sample.joblib` provides sample SHAP values for dashboard visualization
+
+### Notebooks & Scripts ([`notebooks/`](notebooks/), [`scripts/`](scripts/))
+
+**Notebooks:**
+```
+notebooks/
+├── 01_exploration_v2.ipynb            # Active: Complete ML pipeline development
+│   ├── Cell 1-4: ETL, EDA, correlation heatmap
+│   ├── Cell 5-6: KMeans & DBSCAN optimization
+│   ├── Cell 7-11: Predictive model + MAPIE conformal intervals
+│   ├── Cell 8-10: Model diagnostics (residual plots, statistical tests)
+│   ├── Cell 14: SHAP explainability + feature importance
+│   └── Cell 15-16: Model persistence + artifact versioning
+└── 01_exploration.ipynb               # Archived: Initial exploration (superseded)
+```
+
+**Scripts:**
+```
+scripts/
+├── bootstrap.sh                       # Environment initialization (deprecated)
+├── run_all.sh                         # Execute complete pipeline (deprecated)
+├── ci_local_full.sh                   # CI/CD validation: tests + Docker build
+├── train_pipeline.py                  # Standalone model training script
+│   └── Reads: sample_videos.csv → Outputs: models/*.joblib
+├── validate_mapie.py                  # Conformal prediction validation
+│   └── Computes: Coverage, interval widths, CI analysis
+└── __pycache__/                       # Python compiled bytecode (git-ignored)
+```
+
+### Docker Configuration ([`docker-compose.yml`](docker-compose.yml), [`docker-compose.prod.yml`](docker-compose.prod.yml))
+
+**Development Stack** (`docker-compose.yml`):
+```yaml
+services:
+  backend:
+    - Image: FastAPI app (Python 3.12)
+    - Port: 8000 (API endpoint)
+    - Volume Mount: ./sample_videos.csv:read-only, ./models/:read-only
+  
+  frontend:
+    - Image: Vite dev server (Node.js)
+    - Port: 5173 (web dashboard)
+    - Volume Mount: ./frontend/src:hot-reload
+```
+
+**Production Stack** (`docker-compose.prod.yml`):
+```yaml
+services:
+  backend:
+    - Image: Optimized Python container
+    - Port: 8000
+    - Environment: ENVIRONMENT=production
+    - Logging: MLflow experiment tracking
+  
+  frontend:
+    - Image: Nginx serving static bundle
+    - Port: 3000
+    - Build: npm run build → dist/ (optimized assets)
+  
+  mlflow:
+    - Image: MLflow tracking server
+    - Port: 5000
+    - Database: PostgreSQL metadata store
+    - Storage: S3-compatible artifact store
+```
+
+---
+
+## �🔍 Key Insights
+
+### 1. **Content Segmentation (Actual Results)**
+- 2-cluster K-Means (Silhouette=**0.2671**): **513 vs 487** balanced split
+- DBSCAN (eps=0.4, min_samples=5): **3 clusters + 984 noise points (98.4% sparsity)**
+
+### 2. **Feature Importance (Actual from Permutation Analysis)**
+1. **like_rate**: 1.532 (dominant predictor)
+2. **share_rate**: 0.295 (secondary)
+3. **comment_rate**: 0.006 (tertiary)
+- All other features: <0.001 impact
+
+### 3. **Anomaly Detection**
+- ~50 videos (~5%) flagged via Isolation Forest
+- Bidirectional: viral spikes + engagement drops detected
 
 ---
 
