@@ -1,0 +1,82 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Frontend dependencies and build caches
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Notebook checkpoints and editor artifacts
+.ipynb_checkpoints/
+.DS_Store
+
+# Sensitive files - API keys, credentials, secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+id_rsa
+id_dsa
+id_ed25519
+*.secret
+secrets.yaml
+secrets.json
+credentials.json
+service-account*.json
+config.local.yaml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# IDE and editor files
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# OS files
+Thumbs.db
+*.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# MLflow tracking (if you want to keep model registry local only)
+mlruns/
+
+# Optional: Exclude large model files if needed (uncomment if using Git LFS)
+# *.joblib
+# *.pkl
+# *.h5
+# *.pt
+# *.pth

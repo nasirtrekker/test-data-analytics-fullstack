@@ -1,0 +1,18 @@
+services:
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    volumes:
+      - ./sample_videos.csv:/app/sample_videos.csv:ro
+    environment:
+      - APP_DATA_PATH=/app/sample_videos.csv
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  frontend:
+    build: ./frontend
+    ports: ["5173:5173"]
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend

@@ -1,0 +1,225 @@
+# Kubernetes Deployment Template (Production-Only)
+# This file is for FUTURE cloud deployment on Kubernetes clusters (AWS EKS, GCP GKE, Azure AKS, etc.)
+#
+# For local development/testing:
+# - Use: docker-compose up (development mode)
+# - Use: docker-compose -f docker-compose.prod.yml up (production mode with MLflow)
+#
+# To deploy to Kubernetes cluster when ready:
+# 1. Build and push image: docker build -t ghcr.io/org/content-insights-backend:latest ./backend
+# 2. Push to registry: docker push ghcr.io/org/content-insights-backend:latest
+# 3. Deploy: kubectl apply -f k8s-deployment.yaml
+# 4. Verify: kubectl get pods -n content-insights
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: content-insights
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-config
+  namespace: content-insights
+data:
+  cluster_k: "4"
+  anomaly_contamination: "0.05"
+  conformal_alpha: "0.1"
+  n_estimators: "300"
+  dbscan_eps: "0.4"
+  mlflow_tracking_uri: "http://mlflow:5000"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-insights-backend
+  namespace: content-insights
+  labels:
+    app: content-insights
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: content-insights
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: content-insights
+        tier: backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/blendalab/content-insights-backend:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow:5000"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: models
+        persistentVolumeClaim:
+          claimName: models-pvc
+      - name: data
+        configMap:
+          name: ml-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-insights-api
+  namespace: content-insights
+  labels:
+    app: content-insights
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: content-insights
+    tier: backend
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: content-insights
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: training-pipeline
+  namespace: content-insights
+spec:
+  schedule: "0 2 * * *"  # Run at 2 AM daily
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: training
+            image: ghcr.io/blendalab/content-insights-backend:latest
+            command:
+            - python
+            - -m
+            - jupyter
+            - execute
+            - /app/notebooks/02_production_pipeline.ipynb
+            env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow:5000"
+            resources:
+              requests:
+                cpu: 2000m
+                memory: 4Gi
+              limits:
+                cpu: 4000m
+                memory: 8Gi
+            volumeMounts:
+            - name: models
+              mountPath: /app/models
+            - name: notebooks
+              mountPath: /app/notebooks
+          volumes:
+          - name: models
+            persistentVolumeClaim:
+              claimName: models-pvc
+          - name: notebooks
+            configMap:
+              name: notebooks-config
+          restartPolicy: OnFailure
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: content-insights-pdb
+  namespace: content-insights
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: content-insights
+      tier: backend
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: content-insights-hpa
+  namespace: content-insights
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: content-insights-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80

@@ -1,0 +1,118 @@
+version: '3.9'
+
+services:
+  # PostgreSQL backend for MLflow
+  mlflow-db:
+    image: postgres:15-alpine
+    container_name: mlflow-database
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - mlflow_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MLflow tracking server
+  mlflow:
+    image: python:3.12-slim
+    container_name: mlflow-tracking
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+      - ./models:/models
+    working_dir: /app
+    command: >
+      sh -c "pip install mlflow psycopg2-binary &&
+             mlflow server
+             --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow
+             --default-artifact-root /mlruns/artifacts
+             --host 0.0.0.0
+             --port 5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: content-insights-api
+    depends_on:
+      - mlflow
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./sample_videos.csv:/app/sample_videos.csv:ro
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: content-insights-ui
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    volumes:
+      - ./frontend/src:/app/src
+    command: npm run dev
+
+  # Training pipeline executor
+  training-pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    container_name: training-pipeline
+    depends_on:
+      - mlflow
+      - backend
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      PYTHONUNBUFFERED: 1
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./sample_videos.csv:/app/sample_videos.csv:ro
+    profiles:
+      - training
+
+volumes:
+  mlflow_db_data:
+    driver: local
+
+networks:
+  default:
+    name: content-insights-network
