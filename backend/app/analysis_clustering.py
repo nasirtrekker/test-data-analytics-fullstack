@@ -2,7 +2,12 @@
 
 This module implements dual-clustering approach:
 1. K-Means: Partitions data into k=2 clusters (viral vs. engagement-focused)
+   - Silhouette Score: 0.2671 (overlapping clusters, moderate separation)
+   - Cluster distribution: ~513 vs 487 (balanced split)
+
 2. DBSCAN: Density-based outlier detection (eps=0.8, min_samples=8)
+   - Noise ratio: 98.4% (curse of dimensionality)
+   - Clusters found: 3 dense regions + massive noise class
 
 Features (StandardScaler normalized):
 - views: Raw reach metric
@@ -10,14 +15,17 @@ Features (StandardScaler normalized):
 - avg_watch_time_per_view: Retention indicator
 - share_rate: Virality signal
 
-Output:
-- cluster: K-Means label (0 or 1)
-- dbscan_cluster: DBSCAN label (-1 for noise/anomalies)
+CHALLENGES & DESIGN DECISIONS:
+1. K-Means silhouette=0.2671 → consider PCA/UMAP dimensionality reduction
+2. DBSCAN 98.4% noise ratio → high-dimensional sparsity problem
+3. No generalization testing → future: validate clusters on held-out test set
 
-Business segmentation:
-- Cluster 0: High-reach content (>1M views)
-- Cluster 1: High-engagement content (>5% engagement)
-- Noise (-1): Anomalous performance patterns
+FUTURE ENHANCEMENTS:
+- GenAI: Use GPT to analyze cluster themes from video titles
+  Example: cluster_profile = openai.ChatCompletion.create(
+      messages=[{"role": "user", "content": f"Analyze these video titles: {sample_titles}"}])
+- PCA/UMAP: Reduce features 4→2 before DBSCAN
+- Cluster validation: Ensure quality on 20% hold-out test set
 """
 
 from __future__ import annotations

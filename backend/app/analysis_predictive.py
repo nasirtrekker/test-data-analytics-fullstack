@@ -2,28 +2,79 @@
 
 This module implements end-to-end ML pipeline:
 1. RandomForestRegressor: Predicts engagement_rate from 30+ features
+   - Train R²: 0.9988, Test R²: 0.9913 ← SUSPICIOUSLY HIGH (data leakage risk)
+   - Feature set includes derived engagement metrics (circular dependency)
+
 2. MAPIE Conformal Prediction: Generates intervals with 90% theoretical coverage
-3. SHAP TreeExplainer: Feature importance and per-prediction explanations
+   - Jackknife+ method, α=0.1
+   - Coverage achieved: 93.5% ✅ (exceeds 90% target)
+   - Median half-width: ±0.002188 ← VERY TIGHT (may be overconfident)
 
-Model Performance:
-- MAE: 0.0033 (0.33% absolute error)
-- R²: 0.855 (85.5% variance explained)
-- Prediction intervals: ±0.35% median width
+3. SHAP TreeExplainer: Feature importance on 200 validation samples
+   - Top 3 features: like_rate (1.532) >> share_rate (0.295) >> comment_rate (0.006)
+   - Used for explaining individual predictions to users
 
-Feature Engineering:
-- One-hot encoding for categorical variables (category, thumbnail_style)
-- Temporal features: publish_year, publish_month, publish_weekday
-- Normalized engagement signals: like_rate, comment_rate, share_rate
+CHALLENGES & DESIGN DECISIONS:
+1. CIRCULAR DEPENDENCY: engagement_rate features used to predict engagement_rate
+   - like_rate, comment_rate, share_rate ARE derived from engagement_rate
+   - This causes suspiciously perfect predictions
+   - R² > 0.99 on train/test suggests information leakage
 
-MLOps Integration:
-- Tracks training runs, model artifacts, and metrics to MLflow
-- Graceful degradation if MLflow/MAPIE unavailable
-- Supports model versioning and A/B comparison
+2. NO PRODUCTION MONITORING: Model drift undetected
+   - engagement_rate distribution shifts over time (seasonality)
+   - Current setup doesn't track prediction errors in production
+   - Future: Use Evidently AI or Whylabs for drift detection
 
-Uncertainty Quantification:
-- MAPIE Jackknife+ methodology ensures coverage guarantees
-- Conservative intervals minimize business decision risk
-- Per-prediction confidence for risk-aware forecasting
+3. MAPIE INTERVALS OVERCONFIDENT: ±0.002 width extremely tight
+   - May not hold on new data with different characteristics
+   - Recommend monitoring real-world coverage ratios
+
+4. LIMITED EXPLAINABILITY: SHAP on 200 samples only
+   - Rare patterns under-represented
+   - Full SHAP computation too expensive for 1000 samples
+
+FUTURE ENHANCEMENTS:
+1. Fix data leakage:
+   - Use raw counts ONLY: ['views', 'likes', 'comments', 'shares', 'watch_time_seconds']
+   - Compute engagement_rate = (likes + comments + shares) / views
+   - This is target, not a feature!
+
+2. GenAI Hybrid Model:
+   Example:
+   ```python
+   # Combine RandomForest (numerical) + GPT (semantic)
+   rf_pred = rf.predict(X_numerical)[0]  # 0.045
+
+   # GPT semantic assessment
+   prompt = f'Predict engagement for: Title={title}, Category={category}'
+   llm_pred = parse_gpt_response(openai.ChatCompletion.create(...))  # 0.051
+
+   # Ensemble: 70% RF + 30% LLM
+   ensemble_pred = 0.7 * rf_pred + 0.3 * llm_pred  # 0.047 ← more robust
+   ```
+
+3. Production Monitoring:
+   Example:
+   ```python
+   # Track prediction error distribution
+   mlflow.log_metric("daily_mae", daily_errors.mean())
+   mlflow.log_metric("daily_mae_std", daily_errors.std())
+   if daily_mae > baseline_mae * 1.5:  # 50% degradation
+       alert("Model drift detected! Trigger retraining.")
+   ```
+
+4. GenAI Insight Generation:
+   Example:
+   ```python
+   # Generate explanation for each prediction
+   narrative = generate_explanation(
+       prediction=0.045,
+       top_features={'like_rate': 1.532, 'share_rate': 0.295},
+       cluster=0
+   )
+   # Output: "Strong predicted engagement due to high like_rate.
+   #          Similar videos in cluster 0 average 4.2% engagement."
+   ```
 """
 
 from __future__ import annotations
