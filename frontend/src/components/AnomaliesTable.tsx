@@ -1,3 +1,23 @@
+/**
+ * Anomalies Table - Outlier detection results with inspection UI.
+ * 
+ * Features:
+ * - Sortable columns: anomaly_score, views, engagement, etc.
+ * - Pagination: Handle 100+ anomalies gracefully
+ * - Row highlighting: Color-coded by severity
+ * - Cell expansion: Detailed metadata on click
+ * 
+ * Data Source:
+ * - Isolation Forest anomaly detection (10% contamination)
+ * - Labels: 1 = anomalous, 0 = normal
+ * - Scores: -1 to 1 (magnitude of deviation)
+ * 
+ * Use Cases:
+ * - Monitor unexpected viral hits
+ * - Investigate engagement drops
+ * - Quality assurance for content production
+ */
+
 import React from "react";
 import type { VideoRow } from "../types";
 

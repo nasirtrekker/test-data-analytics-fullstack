@@ -1,3 +1,19 @@
+"""Content Performance Insights API - FastAPI REST service layer.
+
+This module exposes HTTP endpoints for video performance analytics, including:
+- Health checks and API metadata
+- Aggregated KPIs (views, engagement metrics)
+- Filtering options and video listings
+- Complete insights (clustering, predictions, anomalies, trends, recommendations)
+- Similar content retrieval via TF-IDF embeddings
+
+The API server initializes application state (models, data, vectorizers) during startup
+via the lifespan context manager, ensuring thread-safe singleton access to precomputed artifacts.
+
+Endpoints are CORS-enabled for localhost development. All responses are JSON-serializable
+with schema validation via Pydantic models.
+"""
+
 from __future__ import annotations
 
 from contextlib import asynccontextmanager

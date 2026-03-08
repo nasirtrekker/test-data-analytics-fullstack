@@ -1,3 +1,28 @@
+"""Model artifact lifecycle management - Version tracking and retrieval.
+
+This module manages trained model storage and versioning:
+1. Artifact Storage: .joblib binary format for sklearn models
+2. Metadata Registry: manifest.json for version info and performance metrics
+3. Model Types: K-Means clusterer, RandomForest regressor, TF-IDF vectorizer
+
+Artifacts Tracked:
+- predictive_base_v2.joblib: RandomForest model (30+ features)
+- clusters_v2.joblib: K-Means model (k=2)
+- title_tfidf.joblib: TF-IDF vectorizer (3K vocabulary)
+- shap_sample.joblib: SHAP values cache
+- mapie_validation.json: Conformal prediction metrics
+
+Version Management:
+- Sequential versioning (v1, v2, v3)
+- Metadata includes model type, training date, performance metrics
+- Fallback mechanisms for missing artifacts
+
+MLOps Integration:
+- Compatible with MLflow Model Registry
+- Serialization format: joblib (optimal for sklearn)
+- Reproducibility: Feature columns and hyperparameters logged
+"""
+
 import json
 import re
 from pathlib import Path

@@ -1,3 +1,29 @@
+/**
+ * TypeScript type definitions - Shared across frontend components.
+ * 
+ * Type Safety Layer:
+ * 1. Compile-time validation of API responses
+ * 2. JSX prop type checking for all components
+ * 3. IDE autocompletion support
+ * 
+ * Core Types:
+ * - VideoRow: Individual video record with engagement metrics
+ * - Metrics: Aggregated KPIs (views, engagement, count)
+ * - Filters: Available filter options (categories, date ranges)
+ * - Insights: Complete analytics results (clustering, prediction, anomalies)
+ * - Clustering: K-Means and DBSCAN results with quality metrics
+ * - PredictiveModel: RandomForest metrics (MAE, R², coverage)
+ * - Anomaly: Isolation Forest outlier detection results
+ * - SimilarRow: TF-IDF content recommendation
+ * 
+ * Relationship Diagram:
+ * VideoRow[] -> Metrics (aggregation)
+ * Filters[] -> Query parameters for /insights endpoint
+ * Insights = {clustering, prediction, anomalies, trends, similar}
+ * 
+ * Documentation: See README.md for detailed schema
+ */
+
 export type Metrics = {
   rows: number;
   total_views: number;

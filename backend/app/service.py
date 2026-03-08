@@ -1,3 +1,21 @@
+"""Service orchestration - Coordinates all analytics engines into unified insights.
+
+This module implements the core business logic layer:
+1. build_state(): Loads data, trains models, initializes artifacts on startup
+2. Aggregation functions: Combines clustering, trends, anomalies, predictions
+3. API response generation: Formats data for HTTP consumption
+
+The State dataclass maintains thread-safe singleton access to:
+- Raw and processed video DataFrame
+- Trained clustering models (K-Means + DBSCAN)
+- TF-IDF vectorizer and embeddings matrix
+- Predictive model + MAPIE conformal intervals + SHAP values
+- Analytical results (clusters, trends, anomalies, predictions)
+
+All computations are lazy-loaded with caching. Clustering metrics (silhouette, Davies-Bouldin)
+are computed once during initialization.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

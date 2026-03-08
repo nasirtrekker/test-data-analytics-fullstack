@@ -1,3 +1,30 @@
+"""Model training pipeline with MLflow experiment tracking.
+
+This script handles:
+1. Data Loading: Reads CSV and applies ETL pipeline
+2. Feature Engineering: Computes derived metrics
+3. Model Training: Fits RandomForest + MAPIE + SHAP
+4. Hyperparameter Tuning: Grid search for optimal k, contamination
+5. MLflow Logging: Tracks runs, metrics, artifacts for reproducibility
+6. Model Versioning: Saves trained artifacts with manifest
+
+ML Pipeline Steps:
+- Clustering (K-Means + DBSCAN): Segment content by engagement
+- Trends (OLS regression): Extract temporal patterns
+- Anomalies (Isolation Forest): Detect outliers
+- Predictions (RandomForest + MAPIE): Engagement forecasting
+- Embeddings (TF-IDF): Content similarity engine
+
+MLflow Integration:
+- Experiment: content-insights-training
+- Logged Artifacts: Models (.joblib), feature columns, manifest
+- Logged Metrics: MAE, R², coverage, silhouette score
+- Run Tracking: Enable model comparison and reproducibility
+
+Usage:
+    MLFLOW_TRACKING_URI=file:./mlruns python -m scripts.train_pipeline
+"""
+
 """Lightweight training script used by CI and tests.
 Saves versioned artifacts into `models/` using backend.app.model_versioning.
 Includes MLflow tracking for MLOps best practices.

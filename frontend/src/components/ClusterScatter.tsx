@@ -1,3 +1,24 @@
+/**
+ * Cluster Scatter Plot - 2D visualization of content segmentation.
+ * 
+ * Visualization:
+ * - X-axis: engagement_rate (0-1 range)
+ * - Y-axis: avg_watch_time_per_view (seconds per view)
+ * - Colors: K-Means cluster assignment (2 clusters)
+ * - Hover: Video title, views, engagement metrics
+ * 
+ * Features:
+ * - Interactive Recharts ScatterChart with responsive sizing
+ * - Legend showing cluster labels
+ * - Tooltips with detailed video metadata
+ * - Filter synchronization (reactive updates)
+ * 
+ * Business Insight:
+ * - Cluster 0: High-reach (viral potential) content
+ * - Cluster 1: High-engagement (loyal audience) content
+ * - Scatter pattern reveals natural market segmentation
+ */
+
 import React from "react";
 import type { VideoRow } from "../types";
 import { ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, Tooltip, Legend, CartesianGrid, BarChart, Bar, Cell, LineChart, Line, ComposedChart } from "recharts";

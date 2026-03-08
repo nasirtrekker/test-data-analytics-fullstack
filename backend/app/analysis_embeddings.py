@@ -1,3 +1,26 @@
+"""Content similarity engine - TF-IDF embeddings and nearest-neighbor search.
+
+This module implements content-based recommendation:
+1. TF-IDF Vectorization: Transforms video titles to sparse vector space
+2. Cosine Similarity: Measures semantic proximity between titles
+3. Top-K Retrieval: Returns most similar videos by engagement correlation
+
+Configuration:
+- ngram_range: (1,2) - unigrams and bigrams
+- max_features: 3,000 - vocabulary size limit
+- min_df fallback: Handles sparse datasets gracefully
+
+Similarity Computation:
+- TF-IDF matrix: term frequency inverse document frequency
+- Cosine similarity: normalized dot product in feature space
+- Top-K ranking: by similarity score with performance correlation
+
+Business Use Case:
+- Recommend similar high-performing content to creators
+- Identify thematic clustering in video catalog
+- Support content series/collection discovery
+"""
+
 from __future__ import annotations
 
 from typing import Any

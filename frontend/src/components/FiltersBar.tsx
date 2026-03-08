@@ -1,3 +1,21 @@
+/**
+ * Filters Bar - Interactive data pipeline control.
+ * 
+ * Filtering Dimensions:
+ * - Category: education, entertainment, animation, other
+ * - Thumbnail Style: Visual categorization
+ * - Date Range: Publish date filtering (min/max)
+ * 
+ * Features:
+ * - Dropdown selectors with validation
+ * - Date picker with calendar UI
+ * - Real-time data updates on filter change
+ * - Filter state persistence (URL params optional)
+ * 
+ * Callback:
+ * - onChangeFilters: Parent component handler for reactive updates
+ */
+
 import React from "react";
 import type { Filters } from "../types";
 

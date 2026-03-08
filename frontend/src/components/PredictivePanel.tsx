@@ -1,3 +1,25 @@
+/**
+ * Predictive Analytics Panel - ML model metrics + explanation.
+ * 
+ * Sections:
+ * 1. Model Metrics: MAE (0.33%), R² (85.5%), Coverage (90%)
+ * 2. Predicted vs Actual: Scatter plot of predictions
+ * 3. MAPIE Intervals: Confidence bands visualization
+ * 4. SHAP Explainability: Feature importance beeswarm plot
+ * 5. Interval Width: Distribution of prediction interval widths
+ * 
+ * Features:
+ * - Real-time model predictions on video selection
+ * - MAPIE conformal intervals with guaranteed coverage
+ * - SHAP force plots show feature contributions
+ * - Model performance dashboard
+ * 
+ * Data Source:
+ * - RandomForest regressor trained on 30+ features
+ * - Validation: 80/20 train/test split
+ * - Uncertainty: Conformal prediction methodology
+ */
+
 import React, { useMemo } from "react";
 import type { Insights, VideoRow } from "../types";
 import {

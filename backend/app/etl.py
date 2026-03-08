@@ -1,3 +1,22 @@
+"""Data processing and ETL pipeline - Load, validate, and normalize video dataset.
+
+This module implements data ingestion and transformation:
+1. Schema validation: Enforces required columns
+2. Type casting: Converts dates, integers, floats
+3. Feature engineering: Derives engagement metrics
+4. Outlier handling: Statistical anomaly detection for engagement rates
+5. Normalization: Ensures consistency across derived features
+
+Input: CSV file with 1,000 video records
+Output: Pandas DataFrame with 20+ features ready for ML pipeline
+
+Data quality checks:
+- Missing column detection
+- Date parsing with error recovery
+- Numeric overflow/underflow handling
+- Engagement rate bounds (0-1 normalization)
+"""
+
 from __future__ import annotations
 
 import pandas as pd

@@ -1,3 +1,26 @@
+"""Time series trend analysis and correlation discovery.
+
+This module implements temporal pattern detection:
+1. weekly_trend_views(): Linear regression on weekly aggregates (OLS)
+2. spearman_engagement_vs_views(): Rank correlation between metrics
+3. correlations(): Pairwise correlations across all engagement dimensions
+
+Analysis Methods:
+- OLS regression: Extracts slope/intercept for trend direction
+- Spearman rank correlation: Robust to outliers and non-linearity
+- Correlation matrix: Identifies multicollinearity patterns
+
+Outputs:
+- Trend metrics: slope (trend direction), intercept (baseline)
+- Correlation coefficients: p-values for statistical significance
+- Temporal patterns: Weekly seasonality and growth rates
+
+Business Applications:
+- Forecast future content performance
+- Identify emerging trends early
+- Understand engagement metric relationships
+"""
+
 from __future__ import annotations
 
 import numpy as np

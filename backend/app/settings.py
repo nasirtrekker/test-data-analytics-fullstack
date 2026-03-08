@@ -1,5 +1,30 @@
 from __future__ import annotations
 
+"""Application configuration - Environment-aware settings management.
+
+This module centralizes configuration parameters with environment variable overrides:
+1. Data Source: CSV file path (default: sample_videos.csv)
+2. ML Hyperparameters: cluster_k, contamination, random_state
+3. Train/Test Split: test_size for model validation
+4. Conformal Prediction: alpha for coverage level
+5. MLflow Tracking: URI and run ID management
+6. CORS Origins: Localhost for development
+
+Configuration Hierarchy:
+1. Environment variables (highest priority)
+2. .env file (default: .env.development)
+3. Hardcoded defaults (fallback)
+
+Supported Environments:
+- development: Local testing with verbose logging
+- production: Kubernetes/Docker deployment with MLflow PostgreSQL backend
+
+Settings Validation:
+- Pydantic schema enforcement
+- Type coercion (strings -> int/bool)
+- Required field checks
+"""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

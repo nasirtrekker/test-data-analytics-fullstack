@@ -1,3 +1,22 @@
+/**
+ * Overview Panel - KPI dashboard with aggregated metrics.
+ * 
+ * Displays:
+ * - Total views: Sum of all video views
+ * - Average engagement: Mean engagement rate across catalog
+ * - Video count: Total videos in dataset
+ * - Content distribution: Category breakdown
+ * 
+ * Features:
+ * - Real-time updates on filter changes
+ * - Responsive grid layout (mobile/desktop)
+ * - Color-coded metrics (green for positive trends)
+ * 
+ * Props:
+ * - metrics: Aggregated KPI data from /metrics endpoint
+ * - filters: Active filter state for recalculation
+ */
+
 import React from "react";
 import type { Metrics } from "../types";
 

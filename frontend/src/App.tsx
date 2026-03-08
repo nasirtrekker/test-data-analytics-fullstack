@@ -1,3 +1,29 @@
+/**
+ * Content Performance Insights Dashboard - Main application component.
+ * 
+ * Root component orchestrating:
+ * 1. State Management: Filters, metrics, insights data fetched from FastAPI
+ * 2. Component Composition: Overview -> Filters -> Analytics panels
+ * 3. Reactive Updates: Real-time data pipeline on filter changes
+ * 
+ * Data Flow:
+ * GET /metrics (KPIs) -> useEffect hooks -> Component state -> Render panels
+ * GET /insights (full analytics) -> Combined clustering/prediction/anomaly views
+ * 
+ * Panels Rendered:
+ * - Overview: KPI cards (total views, avg engagement, count)
+ * - FiltersBar: Category, thumbnail style, date range filters
+ * - ClusterScatter: 2D visualization of K-Means clusters
+ * - AnomaliesTable: Sortable outlier detection results
+ * - PredictivePanel: ML model metrics and MAPIE intervals
+ * - SimilarPanel: TF-IDF content recommendations
+ * 
+ * Architecture:
+ * React 18 hooks (useState, useEffect, useMemo) for efficient re-renders
+ * Fetch API for HTTP communication (async/await pattern)
+ * TypeScript for compile-time type safety
+ */
+
 import React, { useEffect, useMemo, useState } from "react";
 import { getJson } from "./api/client";
 import type { Filters, Metrics, SimilarRow, VideoRow, Insights } from "./types";
