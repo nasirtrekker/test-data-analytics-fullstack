@@ -1,6 +1,6 @@
-# Content Performance Insights Dashboard
+# Content Performance Insights Dashboard — Take-Home Assignment
 
-A production-grade analytics platform for short-form video performance analysis, combining ML-powered insights with interactive visualizations and real-time monitoring capabilities.
+An assignment submission for short-form video performance analysis, combining ML-powered insights with interactive visualizations and clear, reproducible implementation details.
 
 ## Tech Stack
 
