@@ -15,7 +15,7 @@ This repository follows industry best practices for managing development and pro
 ## File Structure
 
 ```
-test_blenda_takehome/
+<repo-root>/
 ├── .env.example           # Template with all variables (committed)
 ├── .env.development       # Dev config (committed, no secrets)
 ├── .env.production        # Prod config template (committed, no secrets)

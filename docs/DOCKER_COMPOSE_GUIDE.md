@@ -244,7 +244,7 @@ docker-compose -f docker-compose.prod.yml up --build
 ```bash
 # On prod server:
 git clone <repo>
-cd test_blenda_takehome
+cd <repo-root>
 
 # Create .env file for secrets (don't commit to git!)
 cat > .env <<EOF

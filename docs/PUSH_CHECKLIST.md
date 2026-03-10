@@ -4,7 +4,7 @@
 
 ```bash
 # 1. Navigate to project root
-cd test_blenda_takehome
+cd <repo-root>
 
 # 2. Run quality checks (REQUIRED)
 make prepush

@@ -37,12 +37,8 @@ COPY notebooks/ /app/notebooks/
 COPY sample_videos.csv /app/
 COPY scripts/ /app/scripts/
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Default entrypoints
-EXPOSE 8000 5000
+# No health check needed — this is a one-shot training job, not a server
+HEALTHCHECK NONE
 
 # Entrypoint: Training pipeline
 ENTRYPOINT ["python", "-m", "jupyter", "execute"]

@@ -44,7 +44,7 @@ docker-compose --version  # Docker Compose 2.0+
 
 ```bash
 # 1. From project root
-cd test_blenda_takehome
+cd <repo-root>
 
 # 2. Build and run (backend + frontend)
 docker-compose up --build
@@ -255,7 +255,7 @@ ls -la models/
 ```bash
 # Script: scripts/daily_retrain.sh
 #!/bin/bash
-cd /path/to/test_blenda_takehome
+cd /path/to/<repo-root>
 DATE=$(date +%Y%m%d)
 docker run --rm \
   -v $(pwd)/models:/app/models \

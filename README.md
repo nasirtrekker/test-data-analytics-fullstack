@@ -36,7 +36,7 @@ scripts/        → CI/CD & automation workflows
 
 ```bash
 # Clone and navigate to repository
-cd test_data-analytics-fullstack 
+cd test-data-analytics-fullstack
 
 # Build and launch service stack
 docker compose up --build -d && sleep 30
@@ -76,6 +76,92 @@ npm run dev
 ```
 
 **For comprehensive testing guide (MLflow, production deployment, CI/CD workflow), see [Testing Guide](#-complete-testing-workflow) below.**
+
+---
+
+## 🎬 Live Demo (2 Quick Options)
+
+### Option A: Docker Demo (Fastest - 1 minute)
+
+```bash
+cd <repo-root>
+./docker-demo.sh up
+```
+
+**Then open in browser:**
+- **Frontend Dashboard**: http://localhost:5173
+- **Backend API Docs**: http://localhost:8000/docs
+- **MLflow Experiments**: http://localhost:5000 → Experiments → content-insights-training
+
+**Stop the demo:**
+```bash
+./docker-demo.sh down
+```
+
+**Services:**
+- PostgreSQL (5432) - MLflow metadata backend
+- MLflow Server (5000) - Experiment tracking & artifact storage
+- Backend API (8000) - ML inference & analytics
+- Frontend (5173) - React dashboard
+
+---
+
+### Option B: Local Tmux Demo (Better for debugging - 5 minutes)
+
+```bash
+cd <repo-root>
+chmod +x demo.sh
+./demo.sh
+```
+
+**Automatically opens 4 synchronized panes:**
+1. **Training Pipeline** - Logs training runs to MLflow (real-time output)
+2. **Backend API** - FastAPI on port 8000 (auto-reload enabled)
+3. **MLflow UI** - Experience tracking server on port 5000
+4. **Frontend** - React Vite dev server on port 5173 (HMR enabled)
+
+**Tmux Controls:**
+- **Navigate panes**: `Ctrl+B` → Arrow keys
+- **Detach**: `Ctrl+B` → `D`
+- **Reattach**: `tmux attach -t content-insights-demo`
+- **Kill session**: `tmux kill-session -t content-insights-demo`
+
+**Then open same 3 browser tabs** (see Docker demo above)
+
+---
+
+### Demo Walkthrough (10 minutes)
+
+**Part 1: Data Pipeline (2 min)**
+- Navigate to http://localhost:5173
+- View dashboard metrics: "1,000 videos analyzed"
+- Show cluster visualization: "2 distinct audience segments"
+- Point to anomalies: "~100 unusual performance patterns"
+
+**Part 2: ML Models (3 min)**
+- Open http://localhost:8000/docs (FastAPI docs)
+- Show `/metrics` endpoint response with live data
+- Explain algorithms: K-Means, Isolation Forest, RandomForest + MAPIE
+- Test `/similar` endpoint: "TF-IDF content recommendations"
+
+**Part 3: MLflow Integration (3 min)**
+- Visit http://localhost:5000
+- Click **Experiments** → **content-insights-training**
+- Show 5+ training runs with:
+  - **Parameters**: n_estimators, data_samples, random_state
+  - **Metrics**: train_mse, train_r2, kmeans_inertia
+  - **Artifacts**: model files, feature columns
+- Show **content-insights-inference** experiment: "Backend inference metrics"
+
+**Wrap-up**: Full ML pipeline from training → versioning → inference → UI
+
+---
+
+### Detailed Documentation
+
+For comprehensive demo setup instructions, architecture details, troubleshooting, and full talking points:
+
+→ **See [`DEMO.md`](DEMO.md)**
 
 ---
 

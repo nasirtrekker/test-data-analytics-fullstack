@@ -37,17 +37,13 @@ services:
       - ./models:/models
     working_dir: /app
     command: >
-      sh -c "pip install mlflow psycopg2-binary &&
-             mlflow server
-             --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow
-             --default-artifact-root /mlruns/artifacts
-             --host 0.0.0.0
-             --port 5000"
+      sh -c "pip install setuptools==80.9.0 && pip install mlflow==2.14.3 psycopg2-binary &&
+             mlflow server --backend-store-uri postgresql://mlflow:mlflow@mlflow-db:5432/mlflow --default-artifact-root /mlruns/artifacts --host 0.0.0.0 --port 5000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
-      interval: 10s
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/', timeout=2)\""]
+      interval: 15s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   # Backend API
   backend:
@@ -68,7 +64,7 @@ services:
       - ./mlruns:/app/mlruns
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)\""]
       interval: 10s
       timeout: 5s
       retries: 5
