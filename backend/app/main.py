@@ -10,26 +10,30 @@ This module exposes HTTP endpoints for video performance analytics, including:
 The API server initializes application state (models, data, vectorizers) during startup
 via the lifespan context manager, ensuring thread-safe singleton access to precomputed artifacts.
 
-Endpoints are CORS-enabled for localhost development. All responses are JSON-serializable
+Endpoints are CORS-enabled for configured origins. All responses are JSON-serializable
 with schema validation via Pydantic models.
 """
 
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from .service import build_state, get_similar, insights, overview_metrics
+from .service import State, build_state, get_similar, insights, overview_metrics
 from .settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize application state in lifespan handler (startup) and keep it available."""
-    # build_state is synchronous and may be moderately heavy; run it here.
     global STATE
+    logger.info("Starting application — loading data and models…")
     STATE = build_state(
         data_path=settings.data_path,
         cluster_k=settings.cluster_k,
@@ -38,7 +42,9 @@ async def lifespan(app: FastAPI):
         test_size=settings.test_size,
         alpha=settings.alpha,
     )
+    logger.info("Application startup complete.")
     yield
+    logger.info("Application shutting down gracefully.")
 
 
 app = FastAPI(
@@ -46,13 +52,25 @@ app = FastAPI(
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=settings.cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 
 STATE = None
+
+
+@app.exception_handler(Exception)
+async def _global_exception_handler(request, exc):  # type: ignore[no-untyped-def]
+    logger.error("Unhandled exception on %s: %s", request.url.path, exc, exc_info=True)
+    return JSONResponse(status_code=500, content={"error": "Internal server error"})
+
+
+def require_state() -> State:
+    if STATE is None:
+        raise HTTPException(status_code=503, detail="Application is still starting up.")
+    return STATE
 
 
 @app.get("/")
@@ -79,12 +97,14 @@ def health():
 
 @app.get("/metrics")
 def metrics():
-    return overview_metrics(STATE.df)
+    state = require_state()
+    return overview_metrics(state.df)
 
 
 @app.get("/filters")
 def filters():
-    df = STATE.df
+    state = require_state()
+    df = state.df
     return {
         "categories": sorted(df["category"].unique().tolist()),
         "thumbnail_styles": sorted(df["thumbnail_style"].unique().tolist()),
@@ -101,7 +121,8 @@ def videos(
     max_date: str | None = None,
     limit: int = Query(default=300, ge=1, le=500),
 ):
-    df = STATE.df
+    state = require_state()
+    df = state.df
     q = df
     if category:
         q = q[q["category"] == category]
@@ -137,9 +158,11 @@ def videos(
 
 @app.get("/insights")
 def insights_endpoint():
-    return insights(STATE.df, STATE.predictive)
+    state = require_state()
+    return insights(state.df, state.predictive)
 
 
 @app.get("/similar")
 def similar(video_id: str, top_k: int = Query(default=8, ge=1, le=20)):
-    return get_similar(STATE.df, STATE.tfidf_mat, video_id=video_id, top_k=top_k)
+    state = require_state()
+    return get_similar(state.df, state.tfidf_mat, video_id=video_id, top_k=top_k)

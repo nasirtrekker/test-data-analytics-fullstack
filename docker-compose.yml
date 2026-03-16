@@ -11,13 +11,23 @@ services:
       - APP_DATA_PATH=/app/sample_videos.csv
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build: ./frontend
-    ports: ["5173:5173"]
+    ports: ["5173:80"]
     env_file:
       - .env.development
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

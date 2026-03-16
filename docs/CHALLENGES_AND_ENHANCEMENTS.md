@@ -57,25 +57,46 @@
 
 ### 3. Predictive Model Challenges
 
-**Challenge:** Perfect train/validation/test metrics (R²=0.9913, MAE=0.0010)
-- **Impact:** Suspiciously high accuracy; likely data leakage or feature engineering artifacts
-- **Mitigation:** Engagement rate derived from engagement metrics used as features
-- **Root Cause:** Multicollinearity in engineered features
-- **Solution in code:**
-  ```python
-  # Current risky feature set:
-  features = ['like_rate', 'comment_rate', 'share_rate', 'virality_rate']
-  # All are derived from engagement_rate → circular dependency
-  
-  # Better approach:
-  features = ['views', 'watch_time_seconds', 'likes', 'comments', 'shares']
-  # Use raw counts, NOT rates
-  ```
+**Challenge (Resolved):** Suspiciously perfect metrics from leakage-prone features
+    - **Observed previously:** Very high train/validation/test R2 with target-derived rate features
+    - **Impact:** Inflated performance not representative of real prediction-time behavior
+    - **Root Cause:** Circular dependency (`engagement_rate` predicted from fields derived from engagement outcomes)
+    - **Resolved in code:**
+        ```python
+        # Removed from predictive feature set (leaky for forecasting):
+        leaky = ['like_rate', 'comment_rate', 'share_rate', 'virality_rate']
+ 
+        # Current safe pre-publication feature set (v2 — improved):
+        numeric   = ['title_length', 'avg_word_length',          # VIF fix: replaces title_words
+                                 'publish_year',
+                                 'month_sin', 'month_cos',                   # cyclical: replaces raw publish_month
+                                 'dow_sin',   'dow_cos']                     # cyclical: replaces raw publish_weekday
+        categorical = ['category', 'thumbnail_style']
+        text      = TfidfVectorizer(max_features=30, ngram_range=(1, 2))  # on title column
+        ```
+    - **Feature engineering improvements applied:**
+        - `title_words` dropped — VIF was ~3.8×10⁷ (near-collinear with `title_length`); replaced by `avg_word_length = title_length / title_words`
+        - `publish_month` / `publish_weekday` replaced by sin/cos cyclical encoding so the model understands Dec→Jan and Sun→Mon wrap-around
+        - TF-IDF bigrams on raw title text added — 30 leakage-safe semantic features
 
-**Challenge:** MAPIE conformal intervals are extremely tight (±0.002188)
-- **Impact:** May be overconfident; doesn't reflect true prediction uncertainty
-- **Mitigation:** Validate coverage on production data
-- **Future:** Compare with bootstrapping-based confidence intervals
+**Current Baseline Challenge:** Weak holdout goodness-of-fit after leakage removal
+    - **Observed now:** Holdout R² ≈ –0.05 to –0.01 with improved leakage-safe features
+    - **Forecastability ceiling:** Spectral entropy 0.93, ForeCA Ω 0.07, Hurst 0.33 — signal near noise; even a perfect model would struggle at per-video scale
+    - **Residual diagnostics:** Low corr(actual,pred), non-zero corr(pred,resid), non-zero residual trend slope
+    - **Interpretation:** Honest baseline after leakage removal — interval reliability (96% coverage, Winkler, CRPS pinball) is the meaningful metric, not R²
+    - **Future Enhancement — Classification reframe (planned, not implemented in the current app/notebook):**
+        Reframe as binary "will this video beat the channel median engagement?" — removes noise from exact value regression, improves generalization, and gives an interpretable probability for upload decisions.
+        This is intentionally documented as the next modeling direction, not as part of the current shipped backend/frontend behavior:
+        ```python
+        channel_median = train_df.groupby('category')['engagement_rate'].median()
+        df['high_engagement'] = (df['engagement_rate'] > df['category'].map(channel_median)).astype(int)
+        # LGBMClassifier + predict_proba → conformal classification (RAPS)
+        ```
+
+**Challenge:** MAPIE conformal intervals can appear overconservative or overconfident depending on drift
+- **Impact:** Interval sharpness can degrade when temporal drift increases
+- **Mitigation:** Monitor both coverage and sharpness (mean width, Winkler, CRPS pinball) on holdout and production slices
+- **Future:** Add rolling-window calibration diagnostics and alert thresholds
 
 **Challenge:** No production performance monitoring
 - **Impact:** Model drift undetected; engagement patterns change over time

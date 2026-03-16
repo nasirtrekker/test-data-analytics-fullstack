@@ -58,7 +58,7 @@ Before pushing:
 - [ ] `make prepush` - exits with 0 (success)
 - [ ] Docker test - backend health returns `{"status":"healthy"}`
 - [ ] Dashboard - frontend renders at http://localhost:5173
-- [ ] Tests - all 5 pytest tests pass
+- [ ] Tests - all 4 pytest tests pass
 - [ ] Security - no secrets found in grep check
 - [ ] Models - `models/*.joblib` files staged and committed
 - [ ] Git status - no unexpected files (no node_modules, .env, logs)

@@ -45,7 +45,7 @@ case "$ACTION" in
         echo "     (Experiments → content-insights-training)"
         echo ""
         echo "💾 Services:"
-        echo "  • PostgreSQL (5432) for MLflow metadata"
+        echo "  • PostgreSQL (internal-only) for MLflow metadata"
         echo "  • MLflow Server (5000) with artifact storage"
         echo "  • Backend API (8000) with model inference"
         echo "  • Frontend (5173) with React dashboard"

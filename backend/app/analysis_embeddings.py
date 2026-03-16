@@ -23,6 +23,7 @@ Business Use Case:
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import numpy as np
@@ -30,6 +31,8 @@ import pandas as pd
 from scipy.sparse import csr_matrix
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+logger = logging.getLogger(__name__)
 
 
 def build_embeddings(titles: list[str]) -> tuple[TfidfVectorizer | None, Any]:
@@ -53,6 +56,7 @@ def build_embeddings(titles: list[str]) -> tuple[TfidfVectorizer | None, Any]:
                 raise ValueError("empty vocabulary")
             return vec, mat
         except Exception:
+            logger.warning("TF-IDF vectorization failed; returning empty matrix.")
             # Return a placeholder empty matrix so callers can handle gracefully
             empty = csr_matrix((len(titles), 0))
             return None, empty
@@ -79,7 +83,7 @@ def similar_titles(df: pd.DataFrame, mat: Any, video_id: str, top_k: int) -> lis
 
     order = np.argsort(-sims)
     out: list[dict] = []
-    for j in order[1 : top_k + 1]:
+    for j in order[1 : top_k + 1]:  # noqa: E203
         # ensure j is valid index
         if j < 0 or j >= len(df):
             continue

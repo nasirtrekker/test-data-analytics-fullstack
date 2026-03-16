@@ -112,10 +112,116 @@ FUTURE ENHANCEMENTS:
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
 from scipy import stats
 from sklearn.linear_model import TheilSenRegressor
+
+logger = logging.getLogger(__name__)
+
+
+def _spectral_entropy_metrics(x: np.ndarray) -> dict:
+    from scipy.signal import periodogram
+
+    _, psd = periodogram(x)
+    psd_norm = psd / (psd.sum() + 1e-12)
+    psd_norm = psd_norm[psd_norm > 0]
+    spec_entropy = float(-np.sum(psd_norm * np.log2(psd_norm)) / np.log2(len(psd_norm)))
+    return {
+        "spectral_entropy": round(spec_entropy, 6),
+        "foreca_score": round(1.0 - spec_entropy, 6),
+    }
+
+
+def _permutation_entropy_metric(x: np.ndarray, n: int) -> dict:
+    import math
+
+    m, tau = 3, 1
+    patterns: dict = {}
+    for i in range(n - (m - 1) * tau):
+        motif = tuple(np.argsort(x[i : i + m * tau : tau]))  # noqa: E203
+        patterns[motif] = patterns.get(motif, 0) + 1
+    total = sum(patterns.values())
+    probs = np.array([v / total for v in patterns.values()])
+    max_entropy = math.log2(math.factorial(m))
+    perm_entropy = float(-np.sum(probs * np.log2(probs + 1e-12)) / max_entropy)
+    return {"permutation_entropy": round(perm_entropy, 6)}
+
+
+def _hurst_metrics(x: np.ndarray, n: int) -> dict:
+    lag_values = [max(2, n // 8), max(4, n // 4), max(8, n // 2)]
+    lag_values = sorted(set(lag for lag in lag_values if lag < n))
+    rs_vals = []
+    for lag in lag_values:
+        sub = x[:lag]
+        mean_sub = sub.mean()
+        deviate = np.cumsum(sub - mean_sub)
+        r = deviate.max() - deviate.min()
+        s = sub.std(ddof=1) + 1e-12
+        rs_vals.append(np.log(r / s))
+    log_lags = np.log(lag_values)
+    hurst = float(np.polyfit(log_lags, rs_vals, 1)[0])
+    if hurst > 0.55:
+        interpretation = "trending (persistent)"
+    elif hurst < 0.45:
+        interpretation = "mean-reverting (anti-persistent)"
+    else:
+        interpretation = "random walk"
+    return {
+        "hurst_exponent": round(hurst, 6),
+        "hurst_interpretation": interpretation,
+    }
+
+
+def _variance_ratio_metrics(x: np.ndarray, n: int) -> dict:
+    k = min(5, n // 4)
+    if k < 2:
+        return {"variance_ratio": None, "variance_ratio_k": None}
+    var1 = float(np.var(np.diff(x), ddof=1))
+    vark = float(np.var(x[k:] - x[:-k], ddof=1) / k)
+    vr = vark / (var1 + 1e-12)
+    return {"variance_ratio": round(vr, 6), "variance_ratio_k": k}
+
+
+def forecastability_metrics(series: np.ndarray) -> dict:
+    """Compute forecastability diagnostics for a univariate time series.
+
+    Metrics align with 'Mastering Modern Time Series Forecasting with Python'
+    (Valery):
+      - Spectral entropy (normalized): low -> more forecastable, high -> noisy
+      - Permutation entropy (normalized): measures ordinal complexity
+      - Hurst exponent (R/S): >0.5 trending, 0.5 random, <0.5 mean-reverting
+      - Variance ratio VR(k=5): near 1 -> random walk, >1 -> trending
+      - ForeCA score proxy (1 - normalized spectral entropy): higher is better
+    """
+    x = np.asarray(series, dtype=float)
+    x = x[np.isfinite(x)]
+    n = len(x)
+    result: dict = {"n_observations": n}
+
+    for helper in (
+        _spectral_entropy_metrics,
+        lambda values: _permutation_entropy_metric(values, n),
+        lambda values: _hurst_metrics(values, n),
+        lambda values: _variance_ratio_metrics(values, n),
+    ):
+        try:
+            result.update(helper(x))
+        except Exception:
+            logger.debug("Forecastability helper %s failed", helper, exc_info=True)
+            if helper is _spectral_entropy_metrics:
+                result.update({"spectral_entropy": None, "foreca_score": None})
+            elif helper.__name__ == "<lambda>":
+                pass
+
+    result.setdefault("permutation_entropy", None)
+    result.setdefault("hurst_exponent", None)
+    result.setdefault("hurst_interpretation", None)
+    result.setdefault("variance_ratio", None)
+    result.setdefault("variance_ratio_k", None)
+    return result
 
 
 def correlations(df: pd.DataFrame) -> dict:

@@ -20,7 +20,9 @@ def test_feature_extraction_consistent():
     df = load_clean(root / 'sample_videos.csv')
     X = extract_features(df)
     assert X.shape[0] == len(df)
-    assert set(['views','avg_watch_time_per_view']).issubset(set(X.columns))
+    # feature_utils.extract_features exposes raw engagement columns for clustering/anomaly use;
+    # analysis_predictive._select_feature_frame builds the early-window feature frame separately.
+    assert set(['title_length', 'avg_word_length']).issubset(set(X.columns))
 
 
 # NOTE: Training test moved to automated test script (test_local.sh)

@@ -82,7 +82,29 @@ export type Insights = {
     };
   };
   predictive_model: {
-    metrics: { mae: number; r2: number; coverage: number; qhat: number; alpha: number; method?: string };
+    metrics: {
+      mae: number;
+      rmse?: number;
+      r2: number;
+      naive_mae?: number;
+      naive_rmse?: number;
+      naive_r2?: number;
+      mae_uplift_vs_naive?: number;
+      model_beats_naive?: boolean;
+      scientific_acceptance?: boolean;
+      smape?: number;
+      maape?: number;
+      wape?: number;
+      coverage: number;
+      target_coverage?: number;
+      coverage_error_abs?: number;
+      qhat: number;
+      interval_width_mean?: number;
+      winkler_score?: number;
+      crps_pinball?: number;
+      alpha: number;
+      method?: string;
+    };
     top_feature_importances: { feature: string; importance: number }[];
     diagnostics?: {
       points: {
@@ -116,5 +138,15 @@ export type Insights = {
         jitter: number;
       }[];
     };
+  };
+  forecastability?: {
+    spectral_entropy?: number;
+    foreca_score?: number;
+    permutation_entropy?: number;
+    hurst_exponent?: number;
+    hurst_interpretation?: string;
+    variance_ratio?: number;
+    variance_ratio_k?: number;
+    n_observations?: number;
   };
 };

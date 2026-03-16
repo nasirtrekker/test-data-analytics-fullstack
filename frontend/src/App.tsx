@@ -98,7 +98,7 @@ export default function App() {
         Content Performance Insights Dashboard
       </h1>
       <div style={{ color: "#f0f0f0", marginBottom: 16, fontSize: 14 }}>
-        ETL + clustering + trend detection + embeddings + anomaly detection + prediction + MAPIE Jackknife+ conformal intervals.
+        ETL + clustering + trend detection + embeddings + anomaly detection + prediction + MAPIE conformal intervals.
       </div>
 
       {metrics && <Overview metrics={metrics} />}
@@ -159,7 +159,7 @@ export default function App() {
         boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
         border: "1px solid rgba(255,255,255,0.3)"
       }}>
-        <h2 style={{ marginTop: 0 }}>Predictive Model + MAPIE Jackknife+ Intervals</h2>
+        <h2 style={{ marginTop: 0 }}>Predictive Model + MAPIE Conformal Intervals</h2>
         <PredictivePanel rows={rows} insights={insights} />
       </div>
       </div>

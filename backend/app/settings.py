@@ -33,7 +33,7 @@ class Settings(BaseSettings):
 
     # Environment
     environment: str = "development"  # development, production, testing
-    debug: bool = True
+    debug: bool = False
     log_level: str = "INFO"
 
     # Data configuration

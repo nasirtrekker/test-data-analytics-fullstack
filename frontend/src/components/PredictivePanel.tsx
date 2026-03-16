@@ -67,6 +67,13 @@ export default function PredictivePanel({ rows, insights }: { rows: VideoRow[]; 
   })), [rows]);
 
   const metrics = insights?.predictive_model?.metrics;
+  const hasNaiveBenchmark =
+    metrics?.naive_mae !== undefined && metrics?.mae_uplift_vs_naive !== undefined;
+  const benchmarkStatus = metrics?.scientific_acceptance
+    ? "Accepted"
+    : "Low-forecastability regime";
+  const benchmarkStatusColor = metrics?.scientific_acceptance ? "#047857" : "#b45309";
+  const benchmarkStatusBg = metrics?.scientific_acceptance ? "#ecfdf5" : "#fffbeb";
   const feats = insights?.predictive_model?.top_feature_importances ?? [];
   const shapTop = insights?.predictive_model?.shap_summary?.top_features ?? [];
   const shapFeatureOrder = insights?.predictive_model?.shap_summary?.feature_order ?? [];
@@ -255,7 +262,7 @@ export default function PredictivePanel({ rows, insights }: { rows: VideoRow[]; 
               </ResponsiveContainer>
             </div>
             <div style={{ fontSize: 10, color: "#6b7280", marginTop: 8, textAlign: "center", fontStyle: "italic" }}>
-              Orange bands show 90% confidence intervals (MAPIE Jackknife+)
+              Orange bands show 90% confidence intervals (MAPIE conformal)
             </div>
           </div>
         </div>
@@ -501,13 +508,98 @@ export default function PredictivePanel({ rows, insights }: { rows: VideoRow[]; 
         </div>
 
         {metrics && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gap: 12 }}>
+            {hasNaiveBenchmark && (
+              <div
+                style={{
+                  background: benchmarkStatusBg,
+                  borderRadius: 10,
+                  borderLeft: `4px solid ${benchmarkStatusColor}`,
+                  padding: "12px 14px",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#334155", fontWeight: 700, marginBottom: 8 }}>
+                  Benchmark Mode: model vs leakage-safe naive baseline
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700 }}>Model MAE</div>
+                    <div style={{ fontSize: 16, color: "#0f766e", fontWeight: 900 }}>{metrics.mae.toFixed(6)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700 }}>Naive MAE</div>
+                    <div style={{ fontSize: 16, color: "#92400e", fontWeight: 900 }}>
+                      {metrics.naive_mae?.toFixed(6)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700 }}>MAE uplift vs naive</div>
+                    <div style={{ fontSize: 16, color: "#1d4ed8", fontWeight: 900 }}>
+                      {metrics.mae_uplift_vs_naive?.toFixed(6)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700 }}>Decision</div>
+                    <div style={{ fontSize: 15, color: benchmarkStatusColor, fontWeight: 900 }}>
+                      {benchmarkStatus}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
             {[
               { label: "MAE", value: metrics.mae.toFixed(6), color: "#0891b2", desc: "Mean Absolute Error" },
+              { label: "RMSE", value: metrics.rmse?.toFixed(6) ?? "-", color: "#0284c7", desc: "Root Mean Squared Error" },
+              { label: "Naive MAE", value: metrics.naive_mae?.toFixed(6) ?? "-", color: "#b45309", desc: "Train-mean baseline" },
+              {
+                label: "MAE Uplift",
+                value: metrics.mae_uplift_vs_naive?.toFixed(6) ?? "-",
+                color: "#1d4ed8",
+                desc: "Naive MAE - Model MAE (↑ better)",
+              },
+              { label: "sMAPE", value: metrics.smape !== undefined ? `${metrics.smape.toFixed(2)}%` : "-", color: "#0ea5e9", desc: "Symmetric MAPE" },
+              { label: "MAAPE", value: metrics.maape?.toFixed(6) ?? "-", color: "#14b8a6", desc: "Mean Arctangent APE" },
+              { label: "WAPE", value: metrics.wape !== undefined ? `${(metrics.wape * 100).toFixed(2)}%` : "-", color: "#22c55e", desc: "Weighted APE" },
               { label: "R² Score", value: metrics.r2.toFixed(4), color: "#06b6d4", desc: "Goodness of Fit" },
               { label: "Coverage", value: `${(metrics.coverage * 100).toFixed(1)}%`, color: "#059669", desc: "Interval Accuracy" },
-              { label: "Alpha", value: metrics.alpha, color: "#7c3aed", desc: "Confidence Level" },
-              { label: "Qhat", value: metrics.qhat.toFixed(6), color: "#ec4899", desc: "Interval Width" },
+              {
+                label: "Target Coverage",
+                value:
+                  metrics.target_coverage !== undefined
+                    ? `${(metrics.target_coverage * 100).toFixed(1)}%`
+                    : "-",
+                color: "#0f766e",
+                desc: "Expected conformal coverage",
+              },
+              {
+                label: "Coverage Error",
+                value: metrics.coverage_error_abs?.toFixed(4) ?? "-",
+                color: "#dc2626",
+                desc: "|actual - target| (↓ better)",
+              },
+              {
+                label: "Mean PI Width",
+                value: metrics.interval_width_mean?.toFixed(6) ?? "-",
+                color: "#10b981",
+                desc: "Average Interval Width",
+              },
+              {
+                label: "Winkler Score",
+                value: metrics.winkler_score?.toFixed(6) ?? "-",
+                color: "#f59e0b",
+                desc: "Width + Coverage Penalty (↓ better)",
+              },
+              {
+                label: "CRPS (Pinball)",
+                value: metrics.crps_pinball?.toFixed(6) ?? "-",
+                color: "#ef4444",
+                desc: "Distribution-free Proper Score (↓ better)",
+              },
+              { label: "Alpha", value: metrics.alpha, color: "#7c3aed", desc: "Miscoverage Level" },
+              { label: "Qhat", value: metrics.qhat.toFixed(6), color: "#ec4899", desc: "Conformal Radius" },
             ].map((m) => (
               <div key={m.label} style={{ background: "#f8fafc", borderRadius: 10, padding: 12, borderLeft: `4px solid ${m.color}`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
                 <div style={{ fontSize: 10, color: "#64748b", fontWeight: 700, marginBottom: 4 }}>{m.desc}</div>
@@ -515,6 +607,7 @@ export default function PredictivePanel({ rows, insights }: { rows: VideoRow[]; 
                 <div style={{ fontSize: 18, color: m.color, fontWeight: 900 }}>{m.value}</div>
               </div>
             ))}
+            </div>
           </div>
         )}
 
@@ -536,6 +629,39 @@ export default function PredictivePanel({ rows, insights }: { rows: VideoRow[]; 
             </div>
           )}
         </div>
+
+        {insights?.forecastability && (() => {
+          const fc = insights.forecastability!;
+          const fcItems = [
+            { label: "Spectral Entropy", value: fc.spectral_entropy?.toFixed(4) ?? "-", color: "#6366f1", desc: "0=forecastable, 1=pure noise" },
+            { label: "ForeCA Score", value: fc.foreca_score?.toFixed(4) ?? "-", color: "#8b5cf6", desc: "1 − spectral entropy (↑ better)" },
+            { label: "Perm. Entropy", value: fc.permutation_entropy?.toFixed(4) ?? "-", color: "#a855f7", desc: "Ordinal complexity (↓ = more structured)" },
+            { label: "Hurst Exponent", value: fc.hurst_exponent?.toFixed(4) ?? "-", color: "#7c3aed", desc: ">0.55 trending · ~0.5 random · <0.45 mean-rev." },
+            { label: "Variance Ratio", value: fc.variance_ratio !== undefined ? `${fc.variance_ratio.toFixed(4)} (k=${fc.variance_ratio_k})` : "-", color: "#4f46e5", desc: "VR≈1 random walk · VR>1 trending" },
+          ];
+          return (
+            <div style={{ marginTop: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "#4f46e5", marginBottom: 10 }}>
+                📡 Forecastability Diagnostics — engagement_rate
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+                {fcItems.map((f) => (
+                  <div key={f.label} style={{ background: "#f5f3ff", borderRadius: 10, padding: 12, borderLeft: `4px solid ${f.color}`, boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <div style={{ fontSize: 10, color: "#6b7280", fontWeight: 700, marginBottom: 4 }}>{f.desc}</div>
+                    <div style={{ fontSize: 12, color: "#1e293b", fontWeight: 600, marginBottom: 2 }}>{f.label}</div>
+                    <div style={{ fontSize: 16, color: f.color, fontWeight: 900 }}>{f.value}</div>
+                  </div>
+                ))}
+              </div>
+              {fc.hurst_interpretation && (
+                <div style={{ marginTop: 10, padding: "8px 12px", background: "#ede9fe", borderRadius: 8, fontSize: 12, color: "#4f46e5", fontWeight: 600 }}>
+                  Hurst interpretation: <strong>{fc.hurst_interpretation}</strong>
+                  {fc.n_observations !== undefined && <span style={{ marginLeft: 12, color: "#6b7280", fontWeight: 400 }}>n = {fc.n_observations} observations</span>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

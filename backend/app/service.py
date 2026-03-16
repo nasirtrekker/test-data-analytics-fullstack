@@ -18,6 +18,7 @@ are computed once during initialization.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,10 +37,13 @@ from .analysis_embeddings import build_embeddings, similar_titles
 from .analysis_predictive import PredictiveArtifacts, fit_predictive_with_conformal
 from .analysis_trends import (
     correlations,
+    forecastability_metrics,
     spearman_engagement_vs_views,
     weekly_trend_views,
 )
 from .etl import load_clean
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -57,13 +61,19 @@ def build_state(
     test_size: float,
     alpha: float,
 ) -> State:
+    logger.info("Loading data from %s", data_path)
     df = load_clean(data_path)
+    logger.info("Loaded %d rows. Adding clusters (k=%d)…", len(df), cluster_k)
     df = add_clusters(df, k=cluster_k, random_state=random_state)
+    logger.info("Adding anomalies (contamination=%.2f)…", contamination)
     df = add_anomalies(df, contamination=contamination, random_state=random_state)
+    logger.info("Fitting predictive model + conformal intervals…")
     df, pred_art = fit_predictive_with_conformal(
         df=df, random_state=random_state, test_size=test_size, alpha=alpha
     )
+    logger.info("Building TF-IDF embeddings…")
     _, mat = build_embeddings(df["title"].astype(str).tolist())
+    logger.info("State build complete.")
     return State(df=df, tfidf_mat=mat, predictive=pred_art)
 
 
@@ -123,6 +133,9 @@ def insights(df: pd.DataFrame, predictive: PredictiveArtifacts) -> dict:
         "correlations": correlations(df),
         "spearman_engagement_vs_views": spearman_engagement_vs_views(df),
         "weekly_trend_views": weekly_trend_views(df),
+        "forecastability": forecastability_metrics(
+            df["engagement_rate"].dropna().to_numpy()
+        ),
         "clustering_diagnostics": {
             "kmeans": {
                 "silhouette": kmeans_sil,

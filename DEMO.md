@@ -292,7 +292,7 @@ Each service waits for the previous one's healthcheck to pass before starting.
 ### Services in `docker-compose.prod.yml`
 
 ```yaml
-mlflow-db:        PostgreSQL 15 (port 5432)
+mlflow-db:        PostgreSQL 15 (internal Docker network only)
                   └─ Stores MLflow run metadata, params, metrics
                   └─ Volume: mlflow_db_data (persists between restarts)
 
@@ -312,7 +312,7 @@ frontend:         Built from frontend/Dockerfile — React Vite (port 5173)
 ```
 
 ### Startup Order
-1. PostgreSQL starts (5432)
+1. PostgreSQL starts on the internal Docker network
 2. MLflow waits for PostgreSQL health
 3. Backend waits for MLflow health
 4. Frontend starts (depends on backend)
@@ -326,7 +326,7 @@ frontend:         Built from frontend/Dockerfile — React Vite (port 5173)
 **Container won't start:**
 ```bash
 docker compose -f docker-compose.prod.yml logs backend
-# Check error, ensure ports 5173, 8000, 5000, 5432 are free
+# Check error, ensure ports 5173, 8000, and 5000 are free
 ```
 
 **Port already in use:**

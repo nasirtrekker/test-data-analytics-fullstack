@@ -1,7 +1,21 @@
 # Complete Project Summary & Execution Guide
 
-**Last Updated**: March 7, 2026
+**Last Updated**: March 12, 2026
 **Status**: Production-Ready ✅
+
+---
+
+## ✅ Latest Validation Snapshot (2026-03-12)
+
+Verified on local venv + Docker before push:
+
+- `make lint`: passed (with non-blocking mypy warnings in `backend/app/main.py`)
+- `make test`: passed (`4 passed`)
+- `cd frontend && npm install && npm run build`: passed
+- `make notebook-check`: passed
+- `make docker-smoke`: passed (backend health + frontend reachability)
+- `docker compose -f docker-compose.prod.yml config`: passed
+- `docker compose -f docker-compose.prod.yml build`: passed
 
 ---
 
@@ -14,7 +28,7 @@ A **complete ML + React dashboard system** for YouTube/TikTok content performanc
 |------|----------|--------|--------|
 | 1-4 | **ETL + EDA** | Feature engineering, 1000 rows, correlation heatmap | ✅ Done |
 | 5-6 | **Clustering** (KMeans k=2 default, DBSCAN eps=0.4 w/ grid search) | Content tier segmentation, silhouette scores | ✅ Optimized |
-| 7-11 | **Predictive** (MAPIE Jackknife+ conformal intervals) | R²=0.9913, coverage=93.5% | ✅ Aligned with backend |
+| 7-11 | **Predictive** (MAPIE CrossConformal, safe pre-publication features, temporal split) | MAE/RMSE/sMAPE/MAAPE/WAPE/coverage + naive baseline comparison via /insights | ✅ Aligned with backend |
 | 8-10 | **Diagnostics** (6 residual plots, normality/heteroscedasticity tests) | Statistical validation | ✅ Complete |
 | 9-10 | **Explainability** (SHAP + permutation importance) | Top 10 drivers identified | ✅ Complete |
 | 12-15 | **Embeddings** (TF-IDF 256-dim + optional BERT 384-dim) | Similarity search ready | ✅ Production-ready |
@@ -23,7 +37,7 @@ A **complete ML + React dashboard system** for YouTube/TikTok content performanc
 - **Service**: FastAPI + uvicorn
 - **Endpoints**: /health, /metrics, /filters, /videos, /insights, /similar
 - **ML Integration**: Clustering, anomaly detection, predictive model with SHAP
-- **Response**: Full diagnostic payload (180 residual points, 20 histogram bins, SHAP features)
+- **Response**: Full diagnostic payload (180 residual points, 20 histogram bins, SHAP features, benchmark mode)
 - **Status**: ✅ Complete (all endpoints tested)
 
 ### 🎨 Frontend Dashboard (`frontend/src/`)
@@ -71,7 +85,7 @@ jupyter lab
 1. Load and validate `sample_videos.csv` (1000 rows)
 2. Engineer 10+ features including engagement_rate, virality_score, watch_time per view
 3. Train clustering models: KMeans (k=2 default configurable), DBSCAN (eps=0.4)
-4. Train predictive model: RandomForestRegressor with MAPIE Jackknife+ conformal intervals
+4. Train predictive model: RandomForestRegressor with MAPIE conformal intervals (CrossConformalRegressor, safe pre-publication features only, temporal split)
 5. Generate diagnostics: 6 residual plots plus statistical tests
 6. Compute explanations: SHAP values and permutation importance
 7. Persist artifacts to `models/` directory
@@ -174,10 +188,12 @@ Clustering Analysis
   ├─ DBSCAN (eps=0.4 grid search)
   └─ Output: clusters_v2.joblib
   ↓
-Predictive Model (MAPIE Jackknife+)
+Predictive Model (MAPIE CrossConformal)
   ├─ RandomForestRegressor (300 trees)
-  ├─ ColumnTransformer (numeric + categorical)
-  ├─ Conformal intervals: 90% coverage (achieves 93.5%)
+  ├─ ColumnTransformer (safe pre-publication features: title_length, title_words, publish dates, category, thumbnail_style)
+  ├─ Conformal intervals: 90% target coverage, temporal train/test split
+  ├─ Naive benchmark: train-mean baseline on holdout
+  ├─ Acceptance flag: beats naive + coverage stability
   └─ Output: predictive_mapie.joblib
   ↓
 Diagnostics
@@ -300,7 +316,7 @@ USER: http://localhost:5173 (or production URL)
 ### ✅ Production-Ready Components
 - [x] Data ETL pipeline with 10+ engineered features
 - [x] Clustering models (KMeans k=2 default + DBSCAN with optimization)
-- [x] Predictive model with MAPIE Jackknife+ conformal intervals (R²=0.9913, coverage=93.5%)
+- [x] Predictive model with MAPIE CrossConformal conformal intervals (safe pre-publication features, temporal split, MAE/RMSE/sMAPE/MAAPE/WAPE/coverage reported)
 - [x] Diagnostic analysis (6 residual plots + statistical validation)
 - [x] Feature importance (permutation importance + SHAP TreeExplainer)
 - [x] Anomaly detection (IsolationForest, 50 examples identified)
@@ -422,13 +438,20 @@ Conformal prediction provides a probabilistic guarantee rather than deterministi
 
 | Metric | Value | Status | Interpretation |
 |--------|-------|--------|-----------------|
-| **Predictive R²** | 0.9913 | ✅ Excellent | Model explains 99.13% of variance |
-| **Conformal Coverage** | 93.5% | ✅ Good | Exceeds 90% target |
+| **Predictive R² (holdout)** | ~ -0.03 to -0.01 | ⚠️ Weak fit | Leakage-safe temporal split reveals low signal baseline |
+| **Conformal Coverage** | ~0.90-0.96 | ✅ Good | Meets/exceeds 90% target despite weak point-fit |
 | **DBSCAN Noise Ratio** | 98.4% | ⚠️ High | High dimensionality → most points noise (expected) |
 | **KMeans Silhouette** | 0.27 | ⚠️ Fair | k=2 default (configurable via APP_CLUSTER_K) |
 | **Anomalies Found** | 50 (~5%) | ✅ Expected | Matches contamination target |
 | **Frontend Sections** | 4 | ✅ Complete | Model Performance, Diagnostics, Importance, Metrics |
 | **API Endpoints** | 7 | ✅ Complete | /docs, /health, /metrics, /filters, /videos, /insights, /similar |
+
+### Note on Current Predictive Baseline
+
+- The original near-perfect R2 figures were from a leakage-prone setup using target-derived rates.
+- The current notebook/backend pipeline enforces prediction-time-safe features and temporal holdout.
+- As a result, holdout point-fit is currently weak (near-zero/negative R2), which is an honest baseline.
+- Residual diagnostics and forecastability metrics indicate noisy target dynamics, so interval quality (coverage, Winkler, CRPS pinball) is prioritized.
 
 ---
 
@@ -478,5 +501,5 @@ curl http://localhost:8000/insights | python -m json.tool  # Full payload
 ---
 
 **Status**: 🟢 Ready for Production
-**Last Update**: March 7, 2026
+**Last Update**: March 12, 2026
 **Next Action**: Review Docker setup → Run locally → Test with real data

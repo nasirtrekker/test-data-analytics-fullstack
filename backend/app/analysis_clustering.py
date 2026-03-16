@@ -1,49 +1,94 @@
-"""Clustering analysis - Segment videos by engagement patterns using K-Means and DBSCAN.
+"""Clustering analysis - Segment videos using PCA-reduced K-Means and HDBSCAN.
 
-This module implements dual-clustering approach:
-1. K-Means: Partitions data into k=2 clusters (viral vs. engagement-focused)
-   - Silhouette Score: 0.2671 (overlapping clusters, moderate separation)
-   - Cluster distribution: ~513 vs 487 (balanced split)
+Approach:
+1. PCA to 2 components on scaled 4-feature space → eliminates curse-of-dimensionality.
+2. K-Means with silhouette-scan (k=2..8) → picks k with best silhouette score.
+3. HDBSCAN replaces DBSCAN → adaptive density, far fewer noise points.
 
-2. DBSCAN: Density-based outlier detection (eps=0.8, min_samples=8)
-   - Noise ratio: 98.4% (curse of dimensionality)
-   - Clusters found: 3 dense regions + massive noise class
-
-Features (StandardScaler normalized):
-- views: Raw reach metric
-- engagement_rate: (likes + comments + shares) / views
-- avg_watch_time_per_view: Retention indicator
-- share_rate: Virality signal
-
-CHALLENGES & DESIGN DECISIONS:
-1. K-Means silhouette=0.2671 → consider PCA/UMAP dimensionality reduction
-2. DBSCAN 98.4% noise ratio → high-dimensional sparsity problem
-3. No generalization testing → future: validate clusters on held-out test set
-
-FUTURE ENHANCEMENTS:
-- GenAI: Use GPT to analyze cluster themes from video titles
-  Example: cluster_profile = openai.ChatCompletion.create(
-      messages=[{"role": "user", "content": f"Analyze these video titles: {sample_titles}"}])
-- PCA/UMAP: Reduce features 4→2 before DBSCAN
-- Cluster validation: Ensure quality on 20% hold-out test set
+Features (StandardScaler normalized, then PCA-reduced):
+- views, engagement_rate, avg_watch_time_per_view, share_rate
 """
 
 from __future__ import annotations
 
+import logging
+
+import numpy as np
 import pandas as pd
-from sklearn.cluster import DBSCAN, KMeans
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
+
+logger = logging.getLogger(__name__)
+
+try:
+    from hdbscan import HDBSCAN
+
+    HDBSCAN_AVAILABLE = True
+except ImportError:
+    HDBSCAN_AVAILABLE = False
+    logger.info("hdbscan not installed — falling back to sklearn HDBSCAN.")
+    try:
+        from sklearn.cluster import HDBSCAN  # type: ignore[attr-defined]
+
+        HDBSCAN_AVAILABLE = True
+    except ImportError:
+        logger.warning("No HDBSCAN available — density clustering disabled.")
+
+CLUSTER_FEATURES = ["views", "engagement_rate", "avg_watch_time_per_view", "share_rate"]
+
+
+def _silhouette_scan(
+    X: np.ndarray, k_range: range, random_state: int
+) -> tuple[int, dict[int, float]]:
+    """Return best k and per-k silhouette scores."""
+    scores: dict[int, float] = {}
+    for k in k_range:
+        labels = KMeans(
+            n_clusters=k, n_init="auto", random_state=random_state
+        ).fit_predict(X)
+        scores[k] = float(silhouette_score(X, labels))
+    best_k = max(scores, key=scores.get)  # type: ignore[arg-type]
+    return best_k, scores
 
 
 def add_clusters(df: pd.DataFrame, k: int, random_state: int) -> pd.DataFrame:
-    feats = df[
-        ["views", "engagement_rate", "avg_watch_time_per_view", "share_rate"]
-    ].copy()
-    X = StandardScaler().fit_transform(feats)
+    feats = df[CLUSTER_FEATURES].copy()
+    scaled = StandardScaler().fit_transform(feats)
+
+    # PCA to 2 dims — enables better separation for both K-Means and HDBSCAN
+    pca = PCA(n_components=2, random_state=random_state)
+    X_pca = pca.fit_transform(scaled)
+    logger.info(
+        "PCA variance explained: %.1f%% + %.1f%%",
+        pca.explained_variance_ratio_[0] * 100,
+        pca.explained_variance_ratio_[1] * 100,
+    )
+
+    # Silhouette scan to find optimal k (override caller if scan is better)
+    k_range = range(2, min(9, len(df) // 10 + 1))
+    if len(k_range) >= 2:
+        best_k, sil_scores = _silhouette_scan(X_pca, k_range, random_state)
+        logger.info(
+            "Silhouette scan: %s → best k=%d (sil=%.4f)",
+            sil_scores,
+            best_k,
+            sil_scores[best_k],
+        )
+        k = best_k
+
     km = KMeans(n_clusters=k, n_init="auto", random_state=random_state)
-    db = DBSCAN(eps=0.8, min_samples=8)
     out = df.copy()
-    out["cluster"] = km.fit_predict(X)
-    # DBSCAN label -1 means noise/outlier points in density-based clustering.
-    out["dbscan_cluster"] = db.fit_predict(X)
+    out["cluster"] = km.fit_predict(X_pca)
+
+    # HDBSCAN on PCA-reduced space
+    if HDBSCAN_AVAILABLE:
+        hdb = HDBSCAN(min_cluster_size=max(5, len(df) // 50), min_samples=3)
+        out["dbscan_cluster"] = hdb.fit_predict(X_pca)
+        noise_ratio = float((out["dbscan_cluster"] == -1).mean())
+        logger.info("HDBSCAN noise ratio: %.1f%%", noise_ratio * 100)
+    else:
+        out["dbscan_cluster"] = -1
+
     return out
