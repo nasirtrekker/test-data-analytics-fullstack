@@ -74,9 +74,9 @@ temp/
 # MLflow tracking (if you want to keep model registry local only)
 mlruns/
 
-# Optional: Exclude large model files if needed (uncomment if using Git LFS)
-# *.joblib
-# *.pkl
-# *.h5
-# *.pt
-# *.pth
+# Model artifacts — only track essential models, not versioned copies
+models/example_artifact_*.joblib
+models/predictive_fallback*.joblib
+models/*_v[0-9]*.joblib
+!models/clusters_v2.joblib
+!models/predictive_base.joblib
