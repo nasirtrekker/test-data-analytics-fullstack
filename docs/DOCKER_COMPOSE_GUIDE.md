@@ -37,8 +37,8 @@ backend:
   - Database: None (loads from CSV only)
 
 frontend:
-  - Port: 5173
-  - Command: npm run dev (Vite dev server with HMR)
+  - Port: 5173 (host) → 80 (container)
+  - Command: nginx static serve (builds React/Vite)
   - API URL: http://localhost:8000
 ```
 
@@ -52,7 +52,7 @@ docker-compose up --build
 ```
 
 ### Characteristics
-✅ Fast iteration (code changes auto-reload via --reload and npm HMR)
+✅ Containerized dev (matches production build)
 ✅ Minimal resource usage
 ✅ Simple networking (docker-compose handles it)
 ❌ No experiment tracking
@@ -75,7 +75,7 @@ services:
 
   frontend:
     build: ./frontend
-    ports: ["5173:5173"]
+    ports: ["5173:80"]
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -141,13 +141,11 @@ Purpose: API server with MLflow integration enabled
 frontend:
   build: ./frontend
   depends_on: backend (health check)
-  ports: ["5173:5173"]
+  ports: ["5173:80"]
   environment:
     - VITE_API_BASE_URL=http://localhost:8000
-  volumes:
-    - ./frontend/src:/app/src       # Hot reload during dev
 ```
-Purpose: React dashboard UI
+Purpose: React dashboard UI (nginx-served)
 
 #### 5. Training Pipeline
 ```yaml
@@ -181,7 +179,7 @@ Purpose: On-demand training executor (run `docker-compose exec training-pipeline
 
 4. Frontend starts (5173)
    ↓ Depends on backend ready
-   ↓ Starts Vite dev server
+   ↓ Serves static React app via nginx
 
 5. Training Pipeline (idle)
    ↓ Ready for manual execution or cron scheduling
@@ -201,7 +199,7 @@ docker-compose -f docker-compose.prod.yml up --build
 
 ### Persistence
 ✅ Database: PostgreSQL keeps metadata across restarts
-✅ Artifacts: Named volume `mlruns_db_data` stores MLflow runs
+✅ Artifacts: Named volume `mlflow_db_data` stores MLflow backend; `./mlruns` host mount stores artifacts
 ✅ Models: Host mount `./models` persists trained models
 ✅ Reproducibility: MLflow tracks exact parameters/code versions
 

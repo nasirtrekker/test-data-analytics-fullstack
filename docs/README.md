@@ -40,18 +40,15 @@ This directory contains comprehensive guides and references for the Blenda Test 
 
 ---
 
-## 🖼️ Current Screenshots
+## 🖼️ Screenshots
 
-Only current screenshots are linked (files starting with old_ are excluded):
-
-- [API Docs](../screenshots/images/Screenshot_api.png)
-- [Dashboard - Cluster + TF-IDF](../screenshots/images/Screenshot_dashboard_cluster_tfidf.png)
-- [Dashboard - Anomalies](../screenshots/images/Screenshot_anomalies.png)
-- [Model + Conformal + Diagnostics](../screenshots/images/Screenshot_model+cp+diagnosis.png)
-- [Permutation + SHAP](../screenshots/images/Screenshot_permutation_shap.png)
-- [Metrics + Confidence + Forecastability](../screenshots/images/Screenshot_metrics_confidence_forcastability.png)
-- [MLflow Experiment View](../screenshots/images/Screenshot_mlflow_experimetn.png)
-- [MLflow Training Run](../screenshots/images/Screenshot_mlflow_train.png)
+> Screenshots can be captured after running the deployment:
+> ```bash
+> docker-compose up --build
+> # Navigate to http://localhost:5173 and capture key panels
+> ```
+>
+> Expected panels: API docs, clustering dashboard, anomaly detection, model diagnostics, permutation/SHAP, metrics, MLflow tracking.
 
 ---
 
