@@ -13,6 +13,41 @@ Commands:
 - backend health: http://localhost:8000/health
 - docker compose down -v
 
+## Dashboard Screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="screenshots/dashboard_up_clustering.png" alt="Dashboard clustering view" width="100%" />
+      <p><strong>Clustering Overview</strong><br/>KMeans/DBSCAN cluster segmentation and feature relationships.</p>
+    </td>
+    <td width="50%">
+      <img src="screenshots/dashboard_anomaliy.png" alt="Dashboard anomaly table" width="100%" />
+      <p><strong>Anomaly Detection</strong><br/>Outlier rows for fast root-cause review.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="screenshots/dashboard_predictivemodel.png" alt="Dashboard predictive benchmark" width="100%" />
+      <p><strong>Predictive Benchmark Mode</strong><br/>Model vs leakage-safe naive baseline with acceptance status.</p>
+    </td>
+    <td width="50%">
+      <img src="screenshots/dashboard_modelmetricst_forecastabilty.png" alt="Dashboard model metrics and forecastability" width="100%" />
+      <p><strong>Forecastability Metrics</strong><br/>Coverage, interval quality, and low-signal transparency.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="screenshots/dashboard_mlflow.png" alt="MLflow experiment dashboard" width="100%" />
+      <p><strong>MLflow Tracking</strong><br/>Experiment comparison and artifact traceability.</p>
+    </td>
+    <td width="50%">
+      <img src="screenshots/dashboard_api.png" alt="FastAPI Swagger docs" width="100%" />
+      <p><strong>API Documentation</strong><br/>Interactive endpoint testing from Swagger UI.</p>
+    </td>
+  </tr>
+</table>
+
 ### Option 2: Run with local venv + npm
 
 Requirements:
@@ -73,7 +108,7 @@ React dashboard (frontend/src/App.tsx) includes:
 - Clustering visualization
 - Anomaly view
 - Predictive metrics and uncertainty outputs
-- Similar content panel
+- Similar content panel (TF-IDF cosine similarity)
 - Interactive filtering
 
 ## Key Insights

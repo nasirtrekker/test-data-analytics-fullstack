@@ -42,11 +42,12 @@ A **complete ML + React dashboard system** for YouTube/TikTok content performanc
 
 ### 🎨 Frontend Dashboard (`frontend/src/`)
 - **UI**: React + TypeScript + Recharts
-- **Reorganized Layout**: 4 logical sections:
-  1. 📊 Model Performance (predicted vs actual + conformal intervals)
-  2. 🔬 Residual Diagnostics (heteroscedasticity + normality checks)
-  3. 🎯 Feature Importance (permutation + SHAP)
-  4. 📈 Metrics & Confidence (5 key metrics, hit-rate)
+- **Dashboard Modules**:
+  1. 📊 Overview KPIs + interactive filters
+  2. 🧩 Clustering scatter visualization
+  3. 🚨 Anomaly detection table
+  4. 🧠 Predictive benchmark panel (model vs naive + uncertainty)
+  5. 🔎 Similar content retrieval (TF-IDF cosine similarity)
 - **Status**: ✅ Complete (just reorganized for decision-making)
 
 ### 🐳 Deployment Options

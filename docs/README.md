@@ -42,13 +42,40 @@ This directory contains comprehensive guides and references for the Blenda Test 
 
 ## 🖼️ Screenshots
 
-> Screenshots can be captured after running the deployment:
-> ```bash
-> docker-compose up --build
-> # Navigate to http://localhost:5173 and capture key panels
-> ```
->
-> Expected panels: API docs, clustering dashboard, anomaly detection, model diagnostics, permutation/SHAP, metrics, MLflow tracking.
+Live dashboard captures from the current build:
+
+<table>
+	<tr>
+		<td width="50%">
+			<img src="../screenshots/dashboard_up_clustering.png" alt="Clustering dashboard" width="100%" />
+			<p><strong>Clustering Dashboard</strong><br/>Content tier segmentation and visual grouping.</p>
+		</td>
+		<td width="50%">
+			<img src="../screenshots/dashboard_anomaliy.png" alt="Anomaly dashboard" width="100%" />
+			<p><strong>Anomaly Dashboard</strong><br/>Outlier identification for investigation.</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="50%">
+			<img src="../screenshots/dashboard_predictivemodel.png" alt="Predictive model benchmark" width="100%" />
+			<p><strong>Predictive Benchmark</strong><br/>Model vs naive baseline with acceptance decision.</p>
+		</td>
+		<td width="50%">
+			<img src="../screenshots/dashboard_modelmetricst_forecastabilty.png" alt="Forecastability metrics dashboard" width="100%" />
+			<p><strong>Model Metrics and Forecastability</strong><br/>Uncertainty metrics and coverage diagnostics.</p>
+		</td>
+	</tr>
+	<tr>
+		<td width="50%">
+			<img src="../screenshots/dashboard_mlflow.png" alt="MLflow experiments" width="100%" />
+			<p><strong>MLflow Tracking</strong><br/>Runs, artifacts, and reproducibility metadata.</p>
+		</td>
+		<td width="50%">
+			<img src="../screenshots/dashboard_api.png" alt="API docs" width="100%" />
+			<p><strong>FastAPI Docs</strong><br/>Interactive endpoint contracts and payload examples.</p>
+		</td>
+	</tr>
+</table>
 
 ---
 
